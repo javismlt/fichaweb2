@@ -1,0 +1,355 @@
+package com.gts.fichaweb.views;
+
+import java.util.stream.Stream;
+
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.applayout.AppLayout;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
+import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinSession;
+import modelos.Empresa;
+import modelos.Usuario;
+import repositorios.UsuarioRepositorio;
+import repositorios.EmpresaRepositorio;
+import modelos.Usuario;
+import repositorios.EmpresaRepositorio;
+import repositorios.UsuarioRepositorio;
+import java.util.List;
+import java.util.stream.Collectors; 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import com.vaadin.flow.component.textfield.PasswordField;
+import com.vaadin.flow.component.HasStyle;
+import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.io.IOException;
+import java.io.InputStream;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.server.StreamResource;
+import java.io.ByteArrayInputStream;
+import com.vaadin.flow.component.html.Image;
+
+@Route("addusuario")
+public class AddUsuario extends AppLayout{
+
+	private final UsuarioRepositorio usuarioRepositorio;
+	private final EmpresaRepositorio empresaRepositorio;
+    private Usuario usuarioActual;
+    private Upload upload;
+
+	public AddUsuario(UsuarioRepositorio usuarioRepositorio, EmpresaRepositorio empresaRepositorio) {
+        this.usuarioRepositorio = usuarioRepositorio;
+        this.empresaRepositorio = empresaRepositorio;
+
+        String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
+        if (nombreUsuario == null) {
+        	getElement().executeJs("window.location.href='/'");
+        } else {
+            this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
+            if (usuarioActual.getRol() == 0 || usuarioActual.getRol() == 1) {
+            	crearHeader(nombreUsuario);
+            	crearFormulario();
+            } else {
+            	Notification.show("Usuario no administrador", 2000, Notification.Position.TOP_CENTER);
+                getElement().executeJs("setTimeout(() => window.location.href='/registro', 2000)");
+                return;
+            }
+        }
+    }
+	
+	private void crearHeader(String nombreUsuario) {
+        Button botonEmpresa = new Button("Añadir Empresa", e -> {
+            UI.getCurrent().navigate("addempresa");
+        });
+        botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
+
+        Button botonUsuario = new Button("Añadir Usuario", e -> {
+            UI.getCurrent().navigate("addusuario");
+        });
+        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
+
+        Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
+        enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
+        enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
+        enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
+        enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+
+        HorizontalLayout menuIzquierdo = new HorizontalLayout();
+        if (usuarioActual.getRol() != 1) {
+            menuIzquierdo.add(botonEmpresa);
+        }
+        
+        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        menuIzquierdo.setSpacing(true);
+        menuIzquierdo.setAlignItems(Alignment.CENTER);
+
+        Button menuDerecho = new Button(nombreUsuario);
+        menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
+
+        ContextMenu contextMenu = new ContextMenu(menuDerecho);
+        contextMenu.setOpenOnClick(true);
+        contextMenu.addItem("Cerrar sesión", e -> {
+            UI.getCurrent().access(() -> {
+                VaadinSession.getCurrent().close();
+                UI.getCurrent().access(() -> {
+                    UI.getCurrent().navigate("");
+                });
+            });
+        });
+
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        header.setWidthFull();
+        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        header.setAlignItems(Alignment.CENTER);
+        header.setPadding(true);
+        header.getStyle().set("padding-top", "10px").set("padding-bottom", "10px").set("padding-left", "100px").set("padding-right", "100px").set("background-color", "#f8f9fa").set("box-shadow", "0 2px 4px rgba(0, 0, 0, 0.1)");
+
+        addToNavbar(header);
+    }	
+	
+	private void crearFormulario() {
+		H2 titulo = new H2("Añadir Usuario");
+		titulo.getStyle().set("text-align", "center");
+
+		Image icono = new Image("img/config.png", "Icono");
+		icono.setWidth("40px");
+		icono.setHeight("40px");
+
+		Button botonImportar = new Button(icono);
+		botonImportar.getStyle().set("margin-left", "10px").set("margin-top", "20px").set("background-color", "white").set("color", "white").set("cursor", "pointer").set("border", "none");
+
+		upload = importar();
+		
+		ContextMenu menuImportar = new ContextMenu(botonImportar);
+		menuImportar.setOpenOnClick(true);
+
+		Span plantillaSpan = new Span("Descargar Plantilla");
+		plantillaSpan.getStyle().set("color", "red").set("cursor", "pointer");
+
+		Span importarSpan = new Span("Importar Usuarios");
+		importarSpan.getStyle().set("color", "green").set("cursor", "pointer");
+
+		Anchor enlaceCSV = DescargaPlantilla();
+		
+		menuImportar.addItem(plantillaSpan, e -> {
+			enlaceCSV.getElement().executeJs("this.click();");
+		});
+
+		menuImportar.addItem(importarSpan, e -> {
+		    upload.getElement().executeJs("this.shadowRoot.querySelector('input[type=file]').click();");
+		});
+
+		HorizontalLayout tituloConBoton = new HorizontalLayout(titulo, botonImportar);
+		tituloConBoton.setAlignItems(Alignment.CENTER);
+		tituloConBoton.setJustifyContentMode(JustifyContentMode.CENTER);
+		tituloConBoton.setWidthFull();
+		tituloConBoton.getStyle().set("margin-bottom", "20px");
+
+	    TextField campo1 = new TextField("Nombre");
+	    TextField campo2 = new TextField("Teléfono");
+	    campo2.setMaxLength(9);
+	    TextField campo3 = new TextField("Correo Electrónico");
+	    TextField campo4 = new TextField("NIF");
+	    campo4.setMaxLength(9);
+	    TextField campo5 = new TextField("Usuario login");
+	    PasswordField  campo6 = new PasswordField ("Contraseña");
+	    TextField campo7 = new TextField("Codigo Personal");
+	    TextField campo8 = new TextField("Pin");
+	    campo8.setMaxLength(4);
+
+	    Select<String> campo9 = new Select<>();
+	    campo9.setLabel("Rol");
+	    campo9.setWidth("300px");
+
+	    final int[] rolSeleccionado = new int[1];
+
+	    if (usuarioActual.getRol() == 1) {
+	        campo9.setItems("Supervisor", "Trabajador", "Multiusuario");
+	    } else {
+	        campo9.setItems("Administrador", "Supervisor", "Trabajador", "Multiusuario");
+	    }
+
+	    campo9.addValueChangeListener(event -> {
+	        String selectedRole = event.getValue();
+	        if ("Administrador".equals(selectedRole)) {
+	            rolSeleccionado[0] = 0; 
+	        } else if ("Supervisor".equals(selectedRole)) {
+	            rolSeleccionado[0] = 1;  
+	        } else if ("Trabajador".equals(selectedRole)) {
+	            rolSeleccionado[0] = 2;  
+	        } else if ("Multiusuario".equals(selectedRole)) {
+	            rolSeleccionado[0] = 3;  
+	        }
+	    });
+	    
+	    Select<String> campo10 = new Select<>();
+	    campo10.setLabel("Fichaje Manual");
+	    campo10.setItems("Activar", "Desactivar");
+	    campo10.setWidth("300px");
+	    
+	    Select<String> campo11 = new Select<>();
+	    campo11.setLabel("Empresa");
+	    campo11.setWidth("300px");
+
+	    if (usuarioActual.getRol() == 1) {
+	        Empresa empresaUsuario = usuarioActual.getEmpresa();
+	        String nombreEmpresa = empresaUsuario.getNombreComercial();
+	        campo11.setItems(nombreEmpresa); 
+	        campo11.setValue(nombreEmpresa); 
+	    } else {
+	        List<String> nombresEmpresas = empresaRepositorio.findAll()
+	                .stream()
+	                .map(Empresa::getNombreComercial)
+	                .toList();
+
+	        campo11.setItems(nombresEmpresas);
+	    }
+
+	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11).forEach(tf -> tf.setWidth("300px"));
+	    
+	    Button btnGuardar = new Button("Guardar");
+	    btnGuardar.setWidth("100px");
+	    btnGuardar.setHeight("40px");
+	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
+
+	    btnGuardar.addClickListener(e -> {
+	        registrarUsuario(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(),campo6.getValue(), campo7.getValue(), campo8.getValue(), rolSeleccionado[0], campo10.getValue(), campo11.getValue());
+	        limpiarFormulario(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11);
+	    });
+	    
+	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
+	    VerticalLayout columnaDerecha = new VerticalLayout(campo7, campo8, campo9, campo10, campo11,btnGuardar);
+	    
+	    columnaIzquierda.setWidth("45%");
+	    columnaDerecha.setWidth("45%");
+	    
+	    HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
+	    columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+	    columnasLayout.setAlignItems(Alignment.START);
+
+	    VerticalLayout layoutFormulario = new VerticalLayout(tituloConBoton, columnasLayout, upload, enlaceCSV);
+	    layoutFormulario.setAlignItems(Alignment.CENTER);
+	    layoutFormulario.setWidthFull();
+	    layoutFormulario.getStyle().set("padding", "20px");
+
+	    setContent(layoutFormulario);
+	}
+	
+	
+	private void registrarUsuario(String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
+		Usuario usuario = new Usuario();
+		usuario.setNombre(Nombre);
+		usuario.setTelefono(Telefono);
+		usuario.setEmail(email);
+		usuario.setNif(nif);
+		usuario.setLoginUsuario(usuarioLogin);
+		BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+		String passwordEncriptada = passwordEncoder.encode(password);
+		usuario.setPassword(passwordEncriptada);
+		
+	    Empresa empresaObj = empresaRepositorio.findByNombreComercial(empresa).orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+	    usuario.setEmpresa(empresaObj);
+
+	    boolean existeCodPersonal = usuarioRepositorio.existsByCodPersonalAndEmpresa_Id(Integer.parseInt(codPersonal), empresaObj.getId());
+
+	    if (existeCodPersonal) {
+	        Notification.show("El código personal ya existe para esta empresa.", 3000, Notification.Position.TOP_CENTER);
+	        return;
+	    }
+
+	    usuario.setCodPersonal(Integer.parseInt(codPersonal));
+		usuario.setPin(pin);
+		usuario.setRol(rol);
+		usuario.setFichajeManual("Activar".equals(fichajeManual) ? 1 : 0);    
+		usuario.setCreado(LocalDateTime.now());
+
+		usuarioRepositorio.save(usuario);
+		Notification.show("Usuario añadido: " + usuario.getNombre(), 2000, Notification.Position.TOP_CENTER);
+	}
+	
+	private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, PasswordField  campo6, TextField campo7, TextField campo8, Select<String> campo9, Select<String> campo10, Select<String> campo11) {
+		campo1.setValue("");
+		campo2.setValue("");
+		campo3.setValue("");
+		campo4.setValue("");
+		campo5.setValue("");
+		campo6.setValue("");
+		campo7.setValue("");
+		campo8.setValue("");
+		campo9.setValue(null);
+		campo10.setValue(null);
+		campo11.setValue(null);
+	}
+	
+	private Upload importar() {
+	    MemoryBuffer buffer = new MemoryBuffer();
+	    Upload upload = new Upload(buffer);
+	    upload.setAcceptedFileTypes(".csv");
+	    upload.getElement().setAttribute("hidden", true);
+	    upload.getElement().executeJs(
+	        "const btn = document.querySelector('vaadin-button[theme~=\"primary\"]');" +
+	        "if (btn) btn.addEventListener('click', () => this.inputElement.click());"
+	    );
+
+	    upload.addSucceededListener(event -> {
+	        try (InputStream inputStream = buffer.getInputStream();
+	            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+	        	
+	            String linea = reader.readLine(); 
+
+	            while ((linea = reader.readLine()) != null) {
+	                String[] partes = linea.split(";");  
+
+	                if (partes.length < 8) {  
+	                    Notification.show("Línea inválida: " + linea, 2000, Notification.Position.MIDDLE);
+	                    continue;
+	                }
+
+	                String nombre = partes[0].trim();
+	                String telefono = partes[1].trim();
+	                String email = partes[2].trim();
+	                String nif = partes[3].trim();
+	                String usuarioLogin = partes[4].trim();
+	                String password = partes[5].trim();
+	                String codPersonal = partes[6].trim();
+	                String pin = partes[7].trim();
+
+	                registrarUsuario(nombre, telefono, email, nif, usuarioLogin, password, codPersonal, pin, 2, "1", usuarioActual.getEmpresa().getNombreComercial());
+	            }
+	            Notification.show("Importación completada", 2000, Notification.Position.TOP_CENTER);
+	        } catch (IOException ex) {
+	            Notification.show("Error al leer el archivo", 2000, Notification.Position.TOP_CENTER);
+	        }
+	    });
+	    return upload;
+	}
+	
+	private Anchor DescargaPlantilla() {
+	    String csvContent = "Nombre;Telefono;Email;Nif;UsuarioLogin;Password;CodPersonal;Pin\n";
+
+	    StreamResource csvResource = new StreamResource("plantilla.csv", () ->
+	            new ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8))
+	    );
+
+	    Anchor csvDescarga = new Anchor(csvResource, "Descargar Plantilla");
+	    csvDescarga.getElement().setAttribute("download", "plantilla.csv");
+	    csvDescarga.getStyle().set("display", "none");  
+
+	    return csvDescarga;
+	}
+}
