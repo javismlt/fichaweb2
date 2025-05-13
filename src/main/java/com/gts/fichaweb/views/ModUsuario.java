@@ -1,4 +1,5 @@
 package com.gts.fichaweb.views;
+
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
@@ -34,6 +35,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
     private final EmpresaRepositorio empresaRepositorio;
     private Usuario usuarioActual;
     private Usuario usuarioLogueado;
+    private String nombreUsuario;
 
     public ModUsuario(UsuarioRepositorio usuarioRepositorio, EmpresaRepositorio empresaRepositorio) {
         this.usuarioRepositorio = usuarioRepositorio;
@@ -50,9 +52,8 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
             return;
         }
 
-        String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
-        Usuario usuarioLogueado = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
-        	this.usuarioLogueado = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
+        nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
+        this.usuarioLogueado = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
 
         if (nombreUsuario == null) {
             getElement().executeJs("window.location.href='/'");
@@ -131,18 +132,23 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
     }
 
     private void cargarDatosFormulario() {
+        if (usuarioActual == null) {
+            Notification.show("Error: Usuario no encontrado", 3000, Notification.Position.TOP_CENTER);
+            return;
+        }
+
         TextField campo1 = new TextField("Nombre");
-        campo1.setValue(usuarioActual.getNombre());
+        campo1.setValue(usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "");
 
         TextField campo2 = new TextField("Teléfono");
-        campo2.setValue(usuarioActual.getTelefono());
+        campo2.setValue(usuarioActual.getTelefono() != null ? usuarioActual.getTelefono() : "");
         campo2.setMaxLength(9);
-        
+
         TextField campo3 = new TextField("Correo Electrónico");
-        campo3.setValue(usuarioActual.getEmail());
+        campo3.setValue(usuarioActual.getEmail() != null ? usuarioActual.getEmail() : "");
 
         TextField campo4 = new TextField("NIF");
-        campo4.setValue(usuarioActual.getNif());
+        campo4.setValue(usuarioActual.getNif() != null ? usuarioActual.getNif() : "");
         campo4.setMaxLength(9);
 
         TextField campo5 = new TextField("Usuario login");
@@ -151,10 +157,10 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         PasswordField campo6 = new PasswordField("Contraseña");
 
         TextField campo7 = new TextField("Codigo Personal");
-        campo7.setValue(String.valueOf(usuarioActual.getCodPersonal()));
+        campo7.setValue(usuarioActual.getCodPersonal() != null ? String.valueOf(usuarioActual.getCodPersonal()) : "");
 
         TextField campo8 = new TextField("Pin");
-        campo8.setValue(usuarioActual.getPin());
+        campo8.setValue(usuarioActual.getPin() != null ? usuarioActual.getPin() : "");
         campo8.setMaxLength(4);
 
         Select<String> campo9 = new Select<>();
@@ -172,36 +178,57 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         campo10.setValue(usuarioActual.getFichajeManual() == 1 ? "Activar" : "Desactivar");
 
         Select<String> campo11 = new Select<>();
-	    campo11.setLabel("Empresa");
-	    campo11.setWidth("300px");
+        campo11.setLabel("Empresa");
+        campo11.setWidth("300px");
 
-	    if (usuarioLogueado.getRol() == 1) {
-	        Empresa empresaUsuario = usuarioLogueado.getEmpresa();
-	        String nombreEmpresa = empresaUsuario.getNombreComercial();
-	        campo11.setItems(nombreEmpresa); 
-	        campo11.setValue(nombreEmpresa); 
-	    } else {
-	        List<String> nombresEmpresas = empresaRepositorio.findAll()
-	                .stream()
-	                .map(Empresa::getNombreComercial)
-	                .toList();
-
-	        campo11.setItems(nombresEmpresas);
-	        String nombreEmpresaUsuario = usuarioActual.getEmpresa().getNombreComercial();
-	        campo11.setValue(nombreEmpresaUsuario);
-	    }
+        if (usuarioLogueado.getRol() == 1) {
+            Empresa empresaUsuario = usuarioLogueado.getEmpresa();
+            String nombreEmpresa = empresaUsuario.getNombreComercial();
+            campo11.setItems(nombreEmpresa);
+            campo11.setValue(nombreEmpresa);
+        } else {
+            List<String> nombresEmpresas = empresaRepositorio.findAll()
+                    .stream()
+                    .map(Empresa::getNombreComercial)
+                    .toList();
+            campo11.setItems(nombresEmpresas);
+            String nombreEmpresaUsuario = usuarioActual.getEmpresa().getNombreComercial();
+            campo11.setValue(nombreEmpresaUsuario);
+        }
 
         Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11).forEach(tf -> tf.setWidth("300px"));
-        
+
         Button btnActualizar = new Button("Actualizar");
         btnActualizar.setWidth("100px");
         btnActualizar.setHeight("40px");
-        btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
-
+        btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+        if(usuarioActual.getRol() != 3) {
+        	btnActualizar.getStyle().set("margin-top", "35px").set("margin-left", "100px");
+        }
+        
         btnActualizar.addClickListener(e -> {
             actualizarUsuario(usuarioActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), getRolNumerico(campo9.getValue()), campo10.getValue(), campo11.getValue());
             Notification.show("Usuario actualizado: " + usuarioActual.getNombre(), 2000, Notification.Position.TOP_CENTER);
         });
+        
+        if (usuarioActual.getRol() == 3) {
+            VerticalLayout columnaIzquierda = new VerticalLayout(campo5);
+            VerticalLayout columnaDerecha = new VerticalLayout(campo6);
+            columnaIzquierda.setWidth("45%");
+            columnaDerecha.setWidth("45%");
+            
+            HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
+            columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+            columnasLayout.setAlignItems(Alignment.START);
+
+            VerticalLayout layoutFormulario = new VerticalLayout(new H2("Modificar Usuario"), columnasLayout, btnActualizar);
+            layoutFormulario.setAlignItems(Alignment.CENTER);
+            layoutFormulario.setWidthFull();
+            layoutFormulario.getStyle().set("padding", "20px");
+
+            setContent(layoutFormulario);
+            return;
+        }
 
         VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
         VerticalLayout columnaDerecha = new VerticalLayout(campo7, campo8, campo9, campo10, campo11, btnActualizar);
@@ -220,28 +247,63 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
 
         setContent(layoutFormulario);
     }
-
+    
+    
     private void actualizarUsuario(int id, String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
         Usuario usuario = usuarioRepositorio.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        usuario.setNombre(Nombre);
-        usuario.setTelefono(Telefono);
-        usuario.setEmail(email);
-        usuario.setNif(nif);
-        usuario.setLoginUsuario(usuarioLogin);
-        if (!password.isEmpty()) {
+
+        if (Nombre != null) {
+            usuario.setNombre(Nombre);
+        }
+        if (Telefono != null) {
+            usuario.setTelefono(Telefono);
+        }
+        if (email != null) {
+            usuario.setEmail(email);
+        }
+        if (nif != null) {
+            usuario.setNif(nif);
+        }
+
+        if (usuarioLogin != null && !usuarioLogin.isEmpty()) {
+            usuario.setLoginUsuario(usuarioLogin);
+        }
+
+        if (password != null && !password.isEmpty()) {
             BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
             String passwordEncriptada = passwordEncoder.encode(password);
             usuario.setPassword(passwordEncriptada);
         }
-        usuario.setCodPersonal(Integer.parseInt(codPersonal));
-        usuario.setPin(pin);
-        usuario.setRol(rol);
-        usuario.setFichajeManual("Activar".equals(fichajeManual) ? 1 : 0);
-        Empresa empresaObj = empresaRepositorio.findByNombreComercial(empresa).orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
-        usuario.setEmpresa(empresaObj);
-        usuario.setActualizado(LocalDateTime.now());
 
+        if (codPersonal != null && !codPersonal.isEmpty()) {
+            try {
+                usuario.setCodPersonal(Integer.parseInt(codPersonal)); 
+            } catch (NumberFormatException e) {
+                System.out.println("Error: codPersonal no es un número válido");
+            }
+        }
+
+        if (pin != null) {
+            usuario.setPin(pin);
+        }
+        if (rol >= 0) { 
+            usuario.setRol(rol);
+        }
+        if (fichajeManual != null) {
+            usuario.setFichajeManual("Activar".equals(fichajeManual) ? 1 : 0);
+        }
+        if (empresa != null) {
+            Empresa empresaObj = empresaRepositorio.findByNombreComercial(empresa)
+                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+            usuario.setEmpresa(empresaObj);
+        }
+
+        usuario.setActualizado(LocalDateTime.now());  
         usuarioRepositorio.save(usuario);
+  
+        if(usuarioActual.getId() == usuarioLogueado.getId()) {
+        	 VaadinSession.getCurrent().setAttribute("username", usuarioLogin);
+        }
 
         UI.getCurrent().navigate("listusuarios");
     }

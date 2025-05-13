@@ -1,6 +1,7 @@
 package com.gts.fichaweb.views;
 
 import modelos.Usuario;
+import com.vaadin.flow.component.Key;
 import repositorios.UsuarioRepositorio;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Image;
@@ -46,6 +47,7 @@ public class LoginVista extends VerticalLayout {
         Button btnLogin = new Button("Iniciar sesión");
         btnLogin.setWidth("300px");
         btnLogin.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+        btnLogin.addClickShortcut(Key.ENTER);
         
         Anchor linkRecuperacion = new Anchor("recuperar", "¿Olvidaste tu contraseña?");
         linkRecuperacion.getStyle().set("font-size", "14px").set("color", "#007BFF").set("cursor", "pointer");

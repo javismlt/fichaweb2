@@ -19,7 +19,11 @@ import modelos.Usuario;
 import repositorios.UsuarioRepositorio;
 import repositorios.EmpresaRepositorio;
 import java.util.stream.Stream;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import com.vaadin.flow.component.select.Select;
+import java.time.LocalDateTime;
 
 @Route("addempresa")
 public class AddEmpresa extends AppLayout{
@@ -108,32 +112,32 @@ public class AddEmpresa extends AppLayout{
 	    TextField campo7 = new TextField("Población");
 	    TextField campo8 = new TextField("Teléfono");
 	    TextField campo9 = new TextField("Correo Electrónico");
-	    TextField campo10 = new TextField("Código GTSERP");
-	    TextField campo11 = new TextField("Grupo GTSERP");
-	    TextField campo12 = new TextField("Empresa GTSERP");
+	    TextField campo10 = new TextField("Máximo Empleados");
+	    TextField campo11 = new TextField("Código GTSERP");
+	    TextField campo12 = new TextField("Grupo GTSERP");
+	    TextField campo13 = new TextField("Empresa GTSERP");
 
-	    Select<String> campo13 = new Select<>();
-	    campo13.setLabel("Modo Pausa");
-	    campo13.setItems("Activar", "Desactivar");
-	    campo13.setWidth("300px");
+	    Select<String> campo14 = new Select<>();
+	    campo14.setLabel("Multiusuario");
+	    campo14.setItems("Activar", "Desactivar");
 	    
-	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12).forEach(tf -> tf.setWidth("300px"));
+	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13, campo14).forEach(tf -> tf.setWidth("300px"));
 
 	    Button btnGuardar = new Button("Guardar");
 	    btnGuardar.setWidth("100px");
 	    btnGuardar.setHeight("40px");
-	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
+	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("text-align", "center");
 
 	    btnGuardar.addClickListener(e -> {
-	        boolean guardado = registrarEmpresa(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue());
+	        boolean guardado = registrarEmpresa(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue());
 
 	        if (guardado) {
-	            limpiarFormulario(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13);
+	            limpiarFormulario(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13, campo14);
 	        }
 	    });
 	    
 	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7);
-	    VerticalLayout columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, btnGuardar);
+	    VerticalLayout columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, campo14);
 	    
 	    columnaIzquierda.setWidth("45%");
 	    columnaDerecha.setWidth("45%");
@@ -142,7 +146,7 @@ public class AddEmpresa extends AppLayout{
 	    columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 	    columnasLayout.setAlignItems(Alignment.START);
 
-	    VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout);
+	    VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout, btnGuardar);
 	    layoutFormulario.setAlignItems(Alignment.CENTER);
 	    layoutFormulario.setWidthFull();
 	    layoutFormulario.getStyle().set("padding", "20px");
@@ -150,7 +154,8 @@ public class AddEmpresa extends AppLayout{
 	    setContent(layoutFormulario);
 	}
 	
-	private boolean registrarEmpresa(String nombreComercial, String razonSocial, String direccion, String codPostal, String pais, String provincia, String poblacion, String telefono, String email, String codGtserp, String grupoGtserp, String empresaGtserp, String activoPausa) {
+	
+	private boolean registrarEmpresa(String nombreComercial, String razonSocial, String direccion, String codPostal, String pais, String provincia, String poblacion, String telefono, String email, String empleados,String codGtserp, String grupoGtserp, String empresaGtserp, String multiusuario) {
 	    int codigo_gtserp = Integer.parseInt(codGtserp);
 	    int grupo_gtserp = Integer.parseInt(grupoGtserp);
 	    int empresa_gtserp = Integer.parseInt(empresaGtserp);
@@ -170,17 +175,23 @@ public class AddEmpresa extends AppLayout{
 	    empresa.setPoblacion(poblacion);
 	    empresa.setTelefono(telefono);
 	    empresa.setEmail(email);
+	    empresa.setMaxEmpleados(Integer.parseInt(empleados));
 	    empresa.setEmpresaGtserp(empresa_gtserp);  
 	    empresa.setCodGtserp(codigo_gtserp);  
 	    empresa.setGrupoGtserp(grupo_gtserp);  
-	    empresa.setActivoPausa("Activar".equals(activoPausa) ? 1 : 0);  
+	    empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);  
 	    
 	    empresaRepositorio.save(empresa);
 	    Notification.show("Empresa añadida: " + empresa.getNombreComercial(), 2000, Notification.Position.TOP_CENTER);
+	    
+	    if ("Activar".equals(multiusuario)) {
+	        registrarUsuarioMultiusuario(empresa);
+	    }
+	    
 	    return true;
 	}
 	
-	private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, TextField campo6, TextField campo7, TextField campo8, TextField campo9, TextField campo10, TextField campo11, TextField campo12, Select<String> campo13) {
+	private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, TextField campo6, TextField campo7, TextField campo8, TextField campo9, TextField campo10, TextField campo11, TextField campo12, TextField campo13, Select<String> campo14) {
 		campo1.setValue("");
 		campo2.setValue("");
 		campo3.setValue("");
@@ -193,6 +204,36 @@ public class AddEmpresa extends AppLayout{
 		campo10.setValue("");
 		campo11.setValue("");
 		campo12.setValue("");
-		campo13.setValue(null);
+		campo13.setValue("");
+		campo14.setValue(null);
+	}
+
+	private void registrarUsuarioMultiusuario(Empresa empresa) {
+	    Usuario usuario = new Usuario();
+	    usuario.setNombre("Multiusuario_" + empresa.getNombreComercial());
+	    usuario.setLoginUsuario("Multi_" + empresa.getId());
+	    
+	    String aleatoriaPassword = generarContraseña();
+	    BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+	    String passwordEncriptada = passwordEncoder.encode(aleatoriaPassword);
+	    usuario.setPassword(passwordEncriptada);
+	    
+	    usuario.setEmpresa(empresa);
+	    usuario.setRol(3);
+	    usuario.setCreado(LocalDateTime.now());
+
+	    usuarioRepositorio.save(usuario);
+	}
+
+	private String generarContraseña() {
+	    String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	    SecureRandom random = new SecureRandom();
+	    StringBuilder password = new StringBuilder(10);
+
+	    for (int i = 0; i < 10; i++) {
+	        int index = random.nextInt(chars.length());
+	        password.append(chars.charAt(index));
+	    }
+	    return password.toString();
 	}
 }

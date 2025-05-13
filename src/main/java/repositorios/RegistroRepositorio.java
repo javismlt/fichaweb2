@@ -13,7 +13,7 @@ public interface RegistroRepositorio extends JpaRepository<Registro, Integer> {
     List<Registro> findByUsuario_Id(Integer usuarioId);
     void deleteByUsuario_Id(Integer usuarioId);
     Registro findTopByUsuarioAndAccionOrderByIdDesc(Usuario usuario, String accion);
-    Registro findTopByUsuarioAndAccionAndHoraFinIsNullOrderByIdDesc(Usuario usuario, String accion);
+    //Registro findTopByUsuarioAndAccionAndHoraFinIsNullOrderByIdDesc(Usuario usuario, String accion);
     Registro findTopByUsuarioAndAccionInOrderByFechaRegistroDesc(Usuario usuario, List<String> acciones);
     Registro findTopByUsuarioOrderByIdDesc(Usuario usuario);
 }

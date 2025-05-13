@@ -46,11 +46,14 @@ public class Empresa {
     @Column(name = "empresa_gtserp", nullable = false)
     private Integer empresaGtserp;
     
-    @Column(name = "activo_pausa", nullable = false)
-    private Integer activoPausa = 1;
+    @Column(name = "multiusuario", nullable = false)
+    private Integer multiusuario = 0;
     
     @Column(name = "activo", nullable = false)
     private Integer activo = 1;
+    
+    @Column(name = "max_empleados", nullable = false)
+    private Integer maxEmpleados;
 
     
     public Integer getId() {
@@ -157,12 +160,12 @@ public class Empresa {
         this.empresaGtserp = empresaGtserp;
     }
 
-    public Integer getActivoPausa() {
-        return activoPausa;
+    public Integer getMultiusuario() {
+        return multiusuario;
     }
 
-    public void setActivoPausa(Integer activoPausa) {
-        this.activoPausa = activoPausa;
+    public void setMultiusuario(Integer multiusuario) {
+        this.multiusuario = multiusuario;
     }
 
     public Integer getActivo() {
@@ -171,5 +174,13 @@ public class Empresa {
 
     public void setActivo(Integer estado) {
         this.activo = estado;
+    }
+    
+    public Integer getMaxEmpleados() {
+        return maxEmpleados;
+    }
+
+    public void setMaxEmpleados(Integer maxEmpleados) {
+        this.maxEmpleados = maxEmpleados;
     }
 }

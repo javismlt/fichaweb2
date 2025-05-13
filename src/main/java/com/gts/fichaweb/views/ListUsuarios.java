@@ -24,6 +24,7 @@ import repositorios.EmpresaRepositorio;
 import repositorios.UsuarioRepositorio;
 import repositorios.RegistroRepositorio; 
 import com.vaadin.flow.component.select.Select;
+import java.util.stream.Collectors;
 
 @Route("listusuarios")
 public class ListUsuarios extends AppLayout {
@@ -32,6 +33,8 @@ public class ListUsuarios extends AppLayout {
     private final EmpresaRepositorio empresaRepositorio;
     private final RegistroRepositorio registroRepositorio;  
     private Usuario usuarioActual;
+    private Span UsuariosActivos; 
+    private Button botonUsuario;
 
     public ListUsuarios(UsuarioRepositorio usuarioRepositorio, EmpresaRepositorio empresaRepositorio, RegistroRepositorio registroRepositorio) {
         this.usuarioRepositorio = usuarioRepositorio;
@@ -60,10 +63,18 @@ public class ListUsuarios extends AppLayout {
         });
         botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
 
-        Button botonUsuario = new Button("Añadir Usuario", e -> {
+        int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
+        int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
+        
+        botonUsuario = new Button("Añadir Usuario", e -> {
             UI.getCurrent().navigate("addusuario");
         });
-        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
+        if (cantidadUsuarios >= maxEmpleados) {
+            botonUsuario.setEnabled(false); 
+            botonUsuario.getStyle().set("background-color", "#bfbfbf"); 
+        } else {
+            botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
+        }
 
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
@@ -109,11 +120,19 @@ public class ListUsuarios extends AppLayout {
     private void mostrarUsuarios() {
         H2 titulo = new H2("Usuarios");
         titulo.getStyle().set("margin-top", "8px").set("text-align", "center");
-
+        
         VerticalLayout contenedorCentro = new VerticalLayout();
         contenedorCentro.setAlignItems(Alignment.CENTER);
         contenedorCentro.setJustifyContentMode(JustifyContentMode.CENTER);
         contenedorCentro.add(titulo);
+
+        UsuariosActivos = new Span();
+        actualizarCantidadUsuarios();
+
+        if (usuarioActual.getRol() == 1) {
+        	UsuariosActivos.getStyle().set("font-size", "16px");
+            contenedorCentro.add(UsuariosActivos);
+        }
 
         VerticalLayout listaUsuarios = new VerticalLayout();
         listaUsuarios.setPadding(true);
@@ -128,7 +147,10 @@ public class ListUsuarios extends AppLayout {
             selectEmpresa.setItemLabelGenerator(Empresa::getNombreComercial);
             selectEmpresa.setPlaceholder("Empresa");
 
-            List<Usuario> usuarios = usuarioRepositorio.findAll();
+            List<Usuario> usuarios = usuarioRepositorio.findAll()
+            	    .stream()
+            	    .filter(usuario -> !(usuario.getRol() == 3 && usuario.getActivo() == 0))
+            	    .collect(Collectors.toList());
             mostrarListaUsuarios(listaUsuarios, usuarios);
 
             selectEmpresa.addValueChangeListener(event -> {
@@ -156,7 +178,7 @@ public class ListUsuarios extends AppLayout {
         listaUsuarios.removeAll();
 
         for (Usuario u : usuarios) {
-            String textoUsuario = u.getNombre() + " (" + u.getLoginUsuario() + ")";
+            String textoUsuario = u.getNombre();
             Span infoUsuario = new Span(textoUsuario);
             infoUsuario.getStyle()
                 .set("font-size", "16px")
@@ -253,21 +275,40 @@ public class ListUsuarios extends AppLayout {
         }
     }
     
-    private void cambiarEstado(Usuario usuario, Button boton) {
-        if (usuario.getActivo() == 1) {
-            usuario.setActivo(0);
-            usuarioRepositorio.save(usuario);
+    private void cambiarEstado(Usuario usuario, Button btnActivar) {
+        int nuevoEstado = usuario.getActivo() == 1 ? 0 : 1;
+        usuario.setActivo(nuevoEstado);
+        usuarioRepositorio.save(usuario);
+        
+        if (usuario.getRol() == 3) {
+            Empresa empresa = usuario.getEmpresa();
+            empresa.setMultiusuario(nuevoEstado);
+            empresaRepositorio.save(empresa);
+        }
 
-            boton.setText("Activar");
-            boton.getStyle().set("background-color", "#bfbfbf").set("color", "white");
-            Notification.show("Usuario " + usuario.getNombre() + " desactivado", 2000, Notification.Position.TOP_CENTER);
+        String texto = nuevoEstado == 1 ? "Activo" : "Activar";
+        String color = nuevoEstado == 1 ? "green" : "#bfbfbf";
+        String mensaje = "Usuario " + usuario.getNombre() + (nuevoEstado == 1 ? " activado" : " desactivado");
+
+        btnActivar.setText(texto);
+        btnActivar.getStyle().set("background-color", color).set("color", "white");
+
+        Notification.show(mensaje, 1000, Notification.Position.TOP_CENTER);
+
+        actualizarCantidadUsuarios();
+    }
+
+    private void actualizarCantidadUsuarios() {
+        int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
+        int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
+        UsuariosActivos.setText("Usuarios " + cantidadUsuarios + " de " + maxEmpleados);
+
+        if (cantidadUsuarios >= maxEmpleados && usuarioActual.getRol() == 1) {
+            botonUsuario.setEnabled(false); 
+            botonUsuario.getStyle().set("background-color", "#bfbfbf"); 
         } else {
-            usuario.setActivo(1);
-            usuarioRepositorio.save(usuario);
-
-            boton.setText("Activo");
-            boton.getStyle().set("background-color", "green").set("color", "white");
-            Notification.show("Usuario " + usuario.getNombre() + " activado", 2000, Notification.Position.TOP_CENTER);
+            botonUsuario.setEnabled(true);
+            botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
         }
     }
 }

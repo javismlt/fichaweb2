@@ -21,8 +21,15 @@ import modelos.Empresa;
 import modelos.Usuario;
 import repositorios.EmpresaRepositorio;
 import repositorios.UsuarioRepositorio;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.util.Optional;
 
 @Route("modempresa/:id") 
 public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
@@ -162,68 +169,83 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
 
         TextField campo9 = new TextField("Correo Electrónico");
         campo9.setValue(empresaActual.getEmail());
+        
+        TextField campo10 = new TextField("Máximo Empleados");
+        campo10.setValue(String.valueOf(empresaActual.getMaxEmpleados()));
 
-        TextField campo10 = new TextField("Código GTSERP");
-        campo10.setValue(String.valueOf(empresaActual.getCodGtserp()));
+        TextField campo11 = new TextField("Código GTSERP");
+        campo11.setValue(String.valueOf(empresaActual.getCodGtserp()));
 
-        TextField campo11 = new TextField("Grupo GTSERP");
-        campo11.setValue(String.valueOf(empresaActual.getGrupoGtserp()));
+        TextField campo12 = new TextField("Grupo GTSERP");
+        campo12.setValue(String.valueOf(empresaActual.getGrupoGtserp()));
 
-        TextField campo12 = new TextField("Empresa GTSERP");
-        campo12.setValue(String.valueOf(empresaActual.getEmpresaGtserp()));
+        TextField campo13 = new TextField("Empresa GTSERP");
+        campo13.setValue(String.valueOf(empresaActual.getEmpresaGtserp()));
 
-        Select<String> campo13 = new Select<>();
-        campo13.setLabel("Modo Pausa");
-        campo13.setItems("Activar", "Desactivar");
-        campo13.setValue(empresaActual.getActivoPausa() == 1 ? "Activar" : "Desactivar");
+        Select<String> campo14 = new Select<>();
+        campo14.setLabel("Multiusuario");
+        campo14.setItems("Activar", "Desactivar");
+        campo14.setValue(empresaActual.getMultiusuario() == 1 ? "Activar" : "Desactivar");
 
         Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9)
             .forEach(tf -> tf.setWidth("300px"));
 
         if (usuarioLogueado.getRol() == 0) {
-            Stream.of(campo10, campo11, campo12, campo13).forEach(tf -> tf.setWidth("300px"));
+            Stream.of(campo10, campo11, campo12, campo13, campo14).forEach(tf -> tf.setWidth("300px"));
         }
 
         Button btnActualizar = new Button("Actualizar");
         btnActualizar.setWidth("100px");
         btnActualizar.setHeight("40px");
-        btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
-
+        if (usuarioLogueado.getRol() == 0) {
+        	btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+        } else {
+        	btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
+        }
+        
         btnActualizar.addClickListener(e -> {
             if (usuarioLogueado.getRol() == 0) {
                 actualizarEmpresa(
                     empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),
                     campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(),
-                    campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue()
+                    campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue()
                 );
             } else {
                 actualizarEmpresa(
                     empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),
                     campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(),
-                    null, null, null, null
+                    null, null, null, null, null
                 );
             }
         });
 
-        VerticalLayout columnaIzquierda;
         VerticalLayout columnaDerecha;
+        VerticalLayout columnaIzquierda;
+        VerticalLayout layoutFormulario = new VerticalLayout();
 
         if (usuarioLogueado.getRol() == 0) {
             columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7);
-            columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, btnActualizar);
+            columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, campo14);
+            HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
+            columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+            columnasLayout.setAlignItems(Alignment.START);
+
+            layoutFormulario.add(new H2("Modificar Empresa"), columnasLayout, btnActualizar);
         } else {
             columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5);
-            columnaDerecha = new VerticalLayout(campo6, campo7, campo8, campo9, btnActualizar);
+            columnaDerecha = new VerticalLayout(campo6, campo7, campo8, campo9);
+
+            HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
+            columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+            columnasLayout.setAlignItems(Alignment.START);
+
+            columnaDerecha.add(btnActualizar);  
+            layoutFormulario.add(new H2("Modificar Empresa"), columnasLayout);
         }
 
         columnaIzquierda.setWidth("45%");
         columnaDerecha.setWidth("45%");
 
-        HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
-        columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-        columnasLayout.setAlignItems(Alignment.START);
-
-        VerticalLayout layoutFormulario = new VerticalLayout(new H2("Modificar Empresa"), columnasLayout);
         layoutFormulario.setAlignItems(Alignment.CENTER);
         layoutFormulario.setWidthFull();
         layoutFormulario.getStyle().set("padding", "20px");
@@ -231,10 +253,11 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         setContent(layoutFormulario);
     }
 
-    private void actualizarEmpresa(int id, String nombreComercial, String razonSocial, String direccion, String codigoPostal, String pais, String provincia, String poblacion, String telefono, String correoElectronico, String codigoGTSERP, String grupoGTSERP, String empresaGTSERP, String modoPausa) {
+    private void actualizarEmpresa(int id, String nombreComercial, String razonSocial, String direccion, String codigoPostal, String pais, String provincia, String poblacion, String telefono, String correoElectronico, String maxEmpleados, String codigoGTSERP, String grupoGTSERP, String empresaGTSERP, String multiusuario) {
         int codigo_gtserp = Integer.parseInt(codigoGTSERP);
         int grupo_gtserp = Integer.parseInt(grupoGTSERP);
         int empresa_gtserp = Integer.parseInt(empresaGTSERP);
+        int max_emleados = Integer.parseInt(maxEmpleados);
 
         Empresa empresa = empresaRepositorio.findById(id).orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
 
@@ -255,13 +278,61 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         empresa.setPoblacion(poblacion);
         empresa.setTelefono(telefono);
         empresa.setEmail(correoElectronico);
+        empresa.setMaxEmpleados(max_emleados);
         empresa.setCodGtserp(codigo_gtserp);
         empresa.setGrupoGtserp(grupo_gtserp);
         empresa.setEmpresaGtserp(empresa_gtserp);
-        empresa.setActivoPausa("Activar".equals(modoPausa) ? 1 : 0);
+        empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);
 
+        if (empresa.getMultiusuario() == 0) {
+            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol(empresa.getId(), 3);
+            usuarios.ifPresent(usuario -> {
+                usuario.setActivo(0);
+                usuarioRepositorio.save(usuario);
+            });
+        } else {
+            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol(empresa.getId(), 3);
+            if (!usuarios.isPresent()) {
+                registrarUsuarioMultiusuario(empresa);
+            } else {
+                usuarios.ifPresent(usuario -> {
+                    usuario.setActivo(1);
+                    usuarioRepositorio.save(usuario);
+                });
+            }
+        }
+        
         empresaRepositorio.save(empresa);
         Notification.show("Empresa actualizada: " + empresa.getNombreComercial(), 2000, Notification.Position.TOP_CENTER);
         UI.getCurrent().navigate("listempresas");
     }
+    
+    private void registrarUsuarioMultiusuario(Empresa empresa) {
+	    Usuario usuario = new Usuario();
+	    usuario.setNombre("Multiusuario_" + empresa.getNombreComercial());
+	    usuario.setLoginUsuario("Multi_" + empresa.getId());
+	    
+	    String aleatoriaPassword = generarContraseña();
+	    BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+	    String passwordEncriptada = passwordEncoder.encode(aleatoriaPassword);
+	    usuario.setPassword(passwordEncriptada);
+	    
+	    usuario.setEmpresa(empresa);
+	    usuario.setRol(3);
+	    usuario.setCreado(LocalDateTime.now());
+
+	    usuarioRepositorio.save(usuario);
+	}
+
+	private String generarContraseña() {
+	    String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	    SecureRandom random = new SecureRandom();
+	    StringBuilder password = new StringBuilder(10);
+
+	    for (int i = 0; i < 10; i++) {
+	        int index = random.nextInt(chars.length());
+	        password.append(chars.charAt(index));
+	    }
+	    return password.toString();
+	}
 }

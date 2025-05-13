@@ -2,6 +2,7 @@ package com.gts.fichaweb.views;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
@@ -46,6 +47,7 @@ public class AdminVista extends VerticalLayout{
         Button btnLogin = new Button("Iniciar sesión");
         btnLogin.setWidth("300px");
         btnLogin.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+        btnLogin.addClickShortcut(Key.ENTER);
         
         Anchor linkRecuperacion = new Anchor("recuperar", "¿Olvidaste tu contraseña?");
         linkRecuperacion.getStyle().set("font-size", "14px").set("color", "#007BFF").set("cursor", "pointer");

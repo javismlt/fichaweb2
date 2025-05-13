@@ -12,7 +12,7 @@ import com.vaadin.flow.server.PWA;
 @EntityScan(basePackages = "modelos")
 @EnableJpaRepositories(basePackages = "repositorios") 
 @Theme("my-theme")
-@PWA(name = "FichaWeb", shortName = "FichaWeb", iconPath = "img/icono.png", backgroundColor = "#ffffff", themeColor = "#ffffff")
+@PWA(name = "FichaWeb", shortName = "FichaWeb", iconPath = "img/icono-144x144.png", backgroundColor = "#ffffff", themeColor = "#ffffff")
 public class FichaWebApplication implements AppShellConfigurator {
 
     public static void main(String[] args) {

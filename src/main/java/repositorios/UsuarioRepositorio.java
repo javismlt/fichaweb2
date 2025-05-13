@@ -13,4 +13,7 @@ public interface UsuarioRepositorio extends JpaRepository<Usuario, Integer> {
 	List<Usuario> findByEmpresaId(Integer empresaId);
 	void deleteByEmpresaId(Integer empresaId);
 	boolean existsByCodPersonalAndEmpresa_Id(int codPersonal, int empresaId);
+	int countByEmpresaIdAndActivo(Integer id_empresa, int activo);
+	Optional<Usuario> findByEmpresa_IdAndRol(Integer idEmpresa, int rol);
+
 }

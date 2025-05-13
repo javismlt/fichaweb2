@@ -170,7 +170,8 @@ public class FichajeOlvidado extends AppLayout{
                     return;
                 }
 
-                registrarPausa(usuario1, fecha, horaPausa, horaReanudacion);
+                registrarPausa(usuario1, fecha, horaPausa);
+                registrarReanudacion(usuario1, fecha, horaReanudacion);
             }
 
             registrarFichajeSalida(usuario1, fecha, horaFin);
@@ -222,10 +223,10 @@ public class FichajeOlvidado extends AppLayout{
             Registro registro = new Registro();
             registro.setUsuarioId(usuario);  
             registro.setFechaRegistro(fecha);
-            registro.setHoraInicio(horaInicio);
-            registro.setHoraFin(null);
+            registro.setHora(horaInicio);
             registro.setAccion("ENTRADA");
             registro.setObservaciones("Entrada fichaje manual");
+            registro.setOrigen("N");
             registro.setValidado(0);
             
             registroRepositorio.save(registro);
@@ -241,10 +242,10 @@ public class FichajeOlvidado extends AppLayout{
             Registro registro = new Registro();
             registro.setUsuarioId(usuario);  
             registro.setFechaRegistro(fecha);
-            registro.setHoraInicio(horaFin);
-            registro.setHoraFin(null);
+            registro.setHora(horaFin);
             registro.setAccion("SALIDA");
             registro.setObservaciones("Salida fichaje manual");
+            registro.setOrigen("N");
             registro.setValidado(0);
             registro.setIdAsociado(idUltimaEntrada);
             
@@ -253,7 +254,7 @@ public class FichajeOlvidado extends AppLayout{
         }
     }
     
-    private void registrarPausa(String nombreUsuario, LocalDate fecha, LocalTime horaPausa, LocalTime horaReanudacion) {
+    private void registrarPausa(String nombreUsuario, LocalDate fecha, LocalTime horaPausa) {
     	Usuario usuario = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
     	Registro ultimoRegistro = registroRepositorio.findTopByUsuarioAndAccionOrderByIdDesc(usuario, "ENTRADA");
         Integer idUltimaEntrada = ultimoRegistro != null ? ultimoRegistro.getId() : null;
@@ -261,12 +262,32 @@ public class FichajeOlvidado extends AppLayout{
             Registro registro = new Registro();
             registro.setUsuarioId(usuario);  
             registro.setFechaRegistro(fecha);
-            registro.setHoraInicio(horaPausa);
-            registro.setHoraFin(horaReanudacion);
+            registro.setHora(horaPausa);
             registro.setAccion("PAUSA");
-            registro.setObservaciones("Pausa y reanudacion fichaje manual");
+            registro.setObservaciones("Pausa fichaje manual");
+            registro.setOrigen("N");
             registro.setValidado(0);
             registro.setIdAsociado(idUltimaEntrada);
+     
+            registroRepositorio.save(registro);
+            cargarMenu(); 
+        }
+    }
+    
+    private void registrarReanudacion(String nombreUsuario, LocalDate fecha, LocalTime horaReanudacion) {
+    	Usuario usuario = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
+    	Registro ultimoRegistro = registroRepositorio.findTopByUsuarioAndAccionOrderByIdDesc(usuario, "PAUSA");
+        Integer idUltimaPausa = ultimoRegistro != null ? ultimoRegistro.getId() : null;
+    	if (idUltimaPausa != null) {
+            Registro registro = new Registro();
+            registro.setUsuarioId(usuario);  
+            registro.setFechaRegistro(fecha);
+            registro.setHora(horaReanudacion);
+            registro.setAccion("REANUDACION");
+            registro.setObservaciones("Reanudación fichaje manual");
+            registro.setOrigen("N");
+            registro.setValidado(0);
+            registro.setIdAsociado(idUltimaPausa);
      
             registroRepositorio.save(registro);
             cargarMenu(); 

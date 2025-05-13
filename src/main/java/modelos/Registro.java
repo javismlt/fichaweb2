@@ -2,6 +2,7 @@ package modelos;
 
 import jakarta.persistence.*;
 import java.time.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @Entity
 @Table(name = "REGISTROS")
@@ -21,11 +22,9 @@ public class Registro {
 	@Column(name = "fecha_registro", nullable = false)
     private LocalDate fechaRegistro;
 	
-	@Column(name = "hora_inicio", nullable = true)
-	private LocalTime horaInicio;
-	
-	@Column(name = "hora_fin", nullable = true)
-	private LocalTime horaFin;
+	@Column(name = "hora", nullable = true)
+	@DateTimeFormat(pattern = "HH:mm:ss")
+	private LocalTime hora;
 	 
 	@Column(name = "accion", nullable = false, length = 15)
 	private String accion;
@@ -35,6 +34,9 @@ public class Registro {
 	 
 	@Column(name = "validado", nullable = false)
 	private Integer validado = 0;
+	
+	@Column(name = "origen", length = 10)
+	private String origen;
 
 	
 	public Integer getId() {
@@ -69,20 +71,12 @@ public class Registro {
 		this.fechaRegistro = fechaRegistro;
 	}
 
-	public LocalTime getHoraInicio() {
-		return horaInicio;
+	public LocalTime getHora() {
+		return hora;
 	}
 
-	public void setHoraInicio(LocalTime horaInicio) {
-		this.horaInicio = horaInicio;
-	}
-
-	public LocalTime getHoraFin() {
-		return horaFin;
-	}
-
-	public void setHoraFin(LocalTime horaFin) {
-		this.horaFin = horaFin;
+	public void setHora(LocalTime hora) {
+		this.hora = hora;
 	}
 
 	public String getAccion() {
@@ -108,4 +102,13 @@ public class Registro {
 	public void setValidado(Integer validado) {
 		this.validado = validado;
 	}
+	
+	public String getOrigen() {
+		return origen;
+	}
+
+	public void setOrigen(String origen) {
+		this.origen = origen;
+	}
+
 }

@@ -42,8 +42,10 @@ import com.vaadin.flow.component.dialog.Dialog;
 import java.time.Duration;
 import org.apache.poi.ss.util.CellRangeAddress;
 import java.util.Comparator;
+import com.vaadin.flow.component.dependency.CssImport;
 
 @Route("consulta")
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class ConsultaVista extends AppLayout {
     private final UsuarioRepositorio usuarioRepositorio;
     private final RegistroRepositorio registroRepositorio;
@@ -114,13 +116,11 @@ public class ConsultaVista extends AppLayout {
 
         HorizontalLayout fechasLayout = new HorizontalLayout(fechaInicio, fechaFin);
         fechasLayout.setAlignItems(Alignment.CENTER);
-        fechasLayout.setSpacing(true);
-        fechasLayout.getStyle().set("margin-left", "85px");
+        fechasLayout.addClassName("fechas-layout");
 
         HorizontalLayout selectUsuarioLayout = new HorizontalLayout();
         selectUsuarioLayout.setAlignItems(Alignment.CENTER);
         selectUsuarioLayout.setSpacing(true);
-        selectUsuarioLayout.getStyle().set("margin-left", "85px");
 
         if (usuarioActual.getRol() == 3) {
             Select<Usuario> selectUsuarios = new Select<>();
@@ -225,40 +225,47 @@ public class ConsultaVista extends AppLayout {
         grid = new Grid<>(Registro.class); 
         grid.setHeightFull();
         grid.removeAllColumns();
+        grid.addClassName("responsive-grid");
         
-        grid.addColumn(Registro::getFechaRegistro).setHeader("Fecha");
-        grid.addColumn(new ComponentRenderer<Span, Registro>(registro -> { Span span = new Span(registro.getAccion());
+        Grid.Column<Registro> fechaColumn = grid.addColumn(Registro::getFechaRegistro).setHeader("Fecha").setAutoWidth(true);
+        Grid.Column<Registro> accionColumn = grid.addColumn(new ComponentRenderer<>(registro -> {
+            Span span = new Span(registro.getAccion());
             if ("entrada".equalsIgnoreCase(registro.getAccion())) {
                 span.getStyle().set("color", "green");
             } else if ("salida".equalsIgnoreCase(registro.getAccion())) {
                 span.getStyle().set("color", "red");
             }
             return span;
-        })).setHeader("Acción");
-        grid.addColumn(registro -> {LocalTime horaInicio = registro.getHoraInicio();return horaInicio != null ? horaInicio.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "";}).setHeader("Hora");
-        grid.addColumn(registro -> {LocalTime horaFin = registro.getHoraFin();return horaFin != null ? horaFin.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "";}).setHeader("Reanudacion");
+        })).setHeader("Acción").setAutoWidth(true);
+        accionColumn.getElement().getClassList().add("accion-column");
+        grid.addColumn(registro -> {LocalTime hora = registro.getHora();return hora != null ? hora.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "";}).setHeader("Hora");
         grid.addColumn(Registro::getObservaciones).setHeader("Observaciones");
-
+        
         fechaInicio.addValueChangeListener(event -> actualizarGrid(fechaInicio.getValue(), fechaFin.getValue()));
         fechaFin.addValueChangeListener(event -> actualizarGrid(fechaInicio.getValue(), fechaFin.getValue()));
         
         totalHorasTrabajadasLabel = new Span("");
-        totalHorasTrabajadasLabel.getStyle().set("margin-left", "85px").set("font-weight", "bold").set("font-size", "16px");
-
+        totalHorasTrabajadasLabel.getStyle().set("font-weight", "bold").set("font-size", "16px");
+        totalHorasTrabajadasLabel.addClassName("horas-trabajadas-label");
+        
         Button descargarPdf = new Button("Descargar PDF", e -> generarPdf(grid));
         Button descargarExcel = new Button("Descargar EXCEL", e -> generarExcel(grid));
 
+        HorizontalLayout botonesLayout = new HorizontalLayout(descargarPdf, descargarExcel);
+        botonesLayout.setAlignItems(Alignment.CENTER);
+        botonesLayout.addClassName("botones-layout");
+        
         descargarPdf.getStyle().set("margin-top", "37px").set("color", "white").set("background-color", "red").set("cursor", "pointer");
         descargarExcel.getStyle().set("margin-top", "37px").set("color", "white").set("background-color", "green").set("cursor", "pointer");
 
-        fechasLayout.add(descargarPdf, descargarExcel);
+        fechasLayout.add(botonesLayout);
 
         VerticalLayout contenidoPrincipal = new VerticalLayout(selectUsuarioLayout, fechasLayout, totalHorasTrabajadasLabel, grid); 
         contenidoPrincipal.setPadding(true);
         contenidoPrincipal.setAlignItems(Alignment.START);
         contenidoPrincipal.setWidthFull();
         contenidoPrincipal.setHeightFull();
-
+        
         setContent(contenidoPrincipal);
         actualizarGrid(fechaInicio.getValue(), fechaFin.getValue());
     }
@@ -273,12 +280,12 @@ public class ConsultaVista extends AppLayout {
         }
         registros.sort(
         	    Comparator.comparing(Registro::getFechaRegistro, Comparator.reverseOrder())
-        	              .thenComparing(Registro::getHoraInicio, Comparator.reverseOrder())
+        	              .thenComparing(Registro::getHora, Comparator.reverseOrder())
         );
         grid.setItems(registros);
 
         String horasTrabajadas = calcularHorasTrabajadas(registros);
-        totalHorasTrabajadasLabel.setText("TOTAL TRABAJADO: " + horasTrabajadas + " horas");
+        totalHorasTrabajadasLabel.setText("TRABAJADO: " + horasTrabajadas + " horas");
     }
     
     private String calcularHorasTrabajadas(List<Registro> registros) {
@@ -292,15 +299,22 @@ public class ConsultaVista extends AppLayout {
                         .findFirst()
                         .orElse(null);
 
-                if (entrada != null && entrada.getHoraInicio() != null && salida.getHoraInicio() != null) {
-                    Duration duration = Duration.between(entrada.getHoraInicio(), salida.getHoraInicio());
+                if (entrada != null && entrada.getHora() != null && salida.getHora() != null) {
+                    Duration duration = Duration.between(entrada.getHora(), salida.getHora());
                     totalDuration = totalDuration.plus(duration);
                 }
             }
 
-            if ("pausa".equalsIgnoreCase(salida.getAccion()) && salida.getHoraInicio() != null && salida.getHoraFin() != null) {
-                Duration descanso = Duration.between(salida.getHoraInicio(), salida.getHoraFin());
-                totalDescanso = totalDescanso.plus(descanso);
+            if ("pausa".equalsIgnoreCase(salida.getAccion()) && salida.getHora() != null) {
+                Registro reanudacion = registros.stream()
+                        .filter(r -> "reanudacion".equalsIgnoreCase(r.getAccion()) && salida.getId().equals(r.getIdAsociado()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (reanudacion != null && reanudacion.getHora() != null) {
+                    Duration descanso = Duration.between(salida.getHora(), reanudacion.getHora());
+                    totalDescanso = totalDescanso.plus(descanso);
+                }
             }
         }
 
@@ -308,9 +322,8 @@ public class ConsultaVista extends AppLayout {
 
         long horas = totalDuration.toHours();
         long minutos = (totalDuration.toMinutes() % 60);
-        long segundos = (totalDuration.getSeconds() % 60);
 
-        return String.format("%02d:%02d:%02d", horas, minutos, segundos);
+        return String.format("%02d:%02d", horas, minutos);
     }
 
     private void generarPdf(Grid<Registro> grid) {
@@ -358,14 +371,14 @@ public class ConsultaVista extends AppLayout {
         table.addHeaderCell(new Cell().add(new Paragraph("FECHA")));
         table.addHeaderCell(new Cell().add(new Paragraph("ACCION")));
         table.addHeaderCell(new Cell().add(new Paragraph("HORA")));
-        table.addHeaderCell(new Cell().add(new Paragraph("REANUDACION")));
+        table.addHeaderCell(new Cell().add(new Paragraph("ORIGEN")));
         table.addHeaderCell(new Cell().add(new Paragraph("OBSERVACIONES")));
 
         for (Registro registro : registros) {
             table.addCell(new Cell().add(new Paragraph(registro.getFechaRegistro().toString())));
             table.addCell(new Cell().add(new Paragraph(registro.getAccion())));
-            table.addCell(new Cell().add(new Paragraph(registro.getHoraInicio() != null ? registro.getHoraInicio().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "")));
-            table.addCell(new Cell().add(new Paragraph(registro.getHoraFin() != null ? registro.getHoraFin().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "")));
+            table.addCell(new Cell().add(new Paragraph(registro.getHora() != null ? registro.getHora().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "")));
+            table.addCell(new Cell().add(new Paragraph(registro.getOrigen())));
             table.addCell(new Cell().add(new Paragraph(registro.getObservaciones())));
         }
 
@@ -434,7 +447,7 @@ public class ConsultaVista extends AppLayout {
         headerRow.createCell(0).setCellValue("FECHA");
         headerRow.createCell(1).setCellValue("ACCION");
         headerRow.createCell(2).setCellValue("HORA");
-        headerRow.createCell(3).setCellValue("REANUDACION");
+        headerRow.createCell(3).setCellValue("ORIGEN");
         headerRow.createCell(4).setCellValue("OBSERVACIONES");
 
         int rowIndex = 5; 
@@ -442,8 +455,8 @@ public class ConsultaVista extends AppLayout {
             XSSFRow row = sheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(registro.getFechaRegistro().format(formatter));
             row.createCell(1).setCellValue(registro.getAccion());
-            row.createCell(2).setCellValue(registro.getHoraInicio() != null ? registro.getHoraInicio().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "");
-            row.createCell(3).setCellValue(registro.getHoraFin() != null ? registro.getHoraFin().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "");
+            row.createCell(2).setCellValue(registro.getHora() != null ? registro.getHora().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "");
+            row.createCell(4).setCellValue(registro.getOrigen());
             row.createCell(4).setCellValue(registro.getObservaciones());
         }
 

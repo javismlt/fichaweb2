@@ -24,6 +24,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.notification.Notification;
 import java.util.stream.Collectors;
+import java.time.format.DateTimeFormatter;
 
 @Route("registro")
 public class RegistroVista extends AppLayout {
@@ -32,6 +33,7 @@ public class RegistroVista extends AppLayout {
     private Usuario usuarioActual;
     private Usuario usuarioAnterior;
     private Usuario usuarioActualAux;
+    String userAgent = "user-agent-string-from-client"; 
 
     private Button boton1;
     private Button boton2;
@@ -132,7 +134,7 @@ public class RegistroVista extends AppLayout {
                 aplicarEstiloBoton(boton3, false);  
                 aplicarEstiloBoton(boton4, false);  
                 aplicarEstiloBoton(boton5, true);   
-            } else if ("ENTRADA".equals(accionUltimoRegistro) || ("PAUSA".equals(accionUltimoRegistro) && ultimoRegistro.getHoraFin() != null)) { 
+            } else if ("ENTRADA".equals(accionUltimoRegistro) || ("REANUDACION".equals(accionUltimoRegistro))) { 
                 aplicarEstiloBoton(boton1, false);   
                 aplicarEstiloBoton(boton2, true);  
                 aplicarEstiloBoton(boton3, false);  
@@ -303,16 +305,16 @@ public class RegistroVista extends AppLayout {
     private void registrarEntrada() {
         Usuario usuario = obtenerUsuarioParaAccion();
         if (usuario != null) {
-            Registro registro = new Registro();
-            registro.setUsuarioId(usuario);  
-            registro.setFechaRegistro(LocalDate.now());
-            registro.setHoraInicio(LocalDateTime.now().toLocalTime());
-            registro.setHoraFin(null);
-            registro.setAccion("ENTRADA");
-            registro.setObservaciones("Entrada de personal");
-            registro.setValidado(0);
+            Registro registroEntrada = new Registro();
+            registroEntrada.setUsuarioId(usuario);  
+            registroEntrada.setFechaRegistro(LocalDate.now());
+            registroEntrada.setHora(LocalDateTime.now().toLocalTime());
+            registroEntrada.setAccion("ENTRADA");
+            registroEntrada.setObservaciones("Entrada de personal");
+            registroEntrada.setValidado(0);
+            registroEntrada.setOrigen(obtenerOrigen());
 
-            registroRepositorio.save(registro);
+            registroRepositorio.save(registroEntrada);
             restaurarMultiusuario();
             cargarMenu(); 
         }
@@ -323,17 +325,17 @@ public class RegistroVista extends AppLayout {
         Registro ultimoRegistro = registroRepositorio.findTopByUsuarioAndAccionOrderByIdDesc(usuario, "ENTRADA");
         Integer idUltimaEntrada = ultimoRegistro != null ? ultimoRegistro.getId() : null;
         if (usuario != null && idUltimaEntrada != null) {
-            Registro registro = new Registro();
-            registro.setUsuarioId(usuario);  
-            registro.setFechaRegistro(LocalDate.now());
-            registro.setHoraInicio(LocalDateTime.now().toLocalTime());
-            registro.setHoraFin(null);
-            registro.setAccion("SALIDA");
-            registro.setObservaciones("Salida de personal");
-            registro.setValidado(0);
-            registro.setIdAsociado(idUltimaEntrada);
+            Registro registroSalida = new Registro();
+            registroSalida.setUsuarioId(usuario);  
+            registroSalida.setFechaRegistro(LocalDate.now());
+            registroSalida.setHora(LocalDateTime.now().toLocalTime());
+            registroSalida.setAccion("SALIDA");
+            registroSalida.setObservaciones("Salida de personal");
+            registroSalida.setValidado(0);
+            registroSalida.setOrigen(obtenerOrigen());
+            registroSalida.setIdAsociado(idUltimaEntrada);
 
-            registroRepositorio.save(registro);
+            registroRepositorio.save(registroSalida);
             restaurarMultiusuario();
             cargarMenu(); 
         }
@@ -347,11 +349,11 @@ public class RegistroVista extends AppLayout {
             Registro registroPausa = new Registro();
             registroPausa.setUsuarioId(usuario);  
             registroPausa.setFechaRegistro(LocalDate.now());
-            registroPausa.setHoraInicio(LocalDateTime.now().toLocalTime());
-            registroPausa.setHoraFin(null);
+            registroPausa.setHora(LocalDateTime.now().toLocalTime());
             registroPausa.setAccion("PAUSA");
-            registroPausa.setObservaciones("Pausa y reanudación de la jornada");
+            registroPausa.setObservaciones("Pausa de la jornada");
             registroPausa.setValidado(0);
+            registroPausa.setOrigen(obtenerOrigen());
             registroPausa.setIdAsociado(idUltimaEntrada);
 
             registroRepositorio.save(registroPausa);
@@ -362,14 +364,22 @@ public class RegistroVista extends AppLayout {
 
     private void registrarReanudacion() {
         Usuario usuario = obtenerUsuarioParaAccion();
-        if (usuario != null) {
-            Registro ultimoRegistroPausa = registroRepositorio.findTopByUsuarioAndAccionAndHoraFinIsNullOrderByIdDesc(usuario, "PAUSA");
-            if (ultimoRegistroPausa != null) {
-                ultimoRegistroPausa.setHoraFin(LocalDateTime.now().toLocalTime());
-                registroRepositorio.save(ultimoRegistroPausa);
-                restaurarMultiusuario();
-                cargarMenu();
-            }
+        Registro ultimoRegistro = registroRepositorio.findTopByUsuarioAndAccionOrderByIdDesc(usuario, "PAUSA");
+        Integer idUltimaPausa = ultimoRegistro != null ? ultimoRegistro.getId() : null;
+        if (usuario != null && idUltimaPausa != null) {
+        	Registro registroReanudacion = new Registro();
+        	registroReanudacion.setUsuarioId(usuario);  
+        	registroReanudacion.setFechaRegistro(LocalDate.now());
+        	registroReanudacion.setHora(LocalDateTime.now().toLocalTime());
+        	registroReanudacion.setAccion("REANUDACION");
+        	registroReanudacion.setObservaciones("Reanudación de la jornada");
+        	registroReanudacion.setValidado(0);
+        	registroReanudacion.setOrigen(obtenerOrigen());
+        	registroReanudacion.setIdAsociado(idUltimaPausa);
+
+            registroRepositorio.save(registroReanudacion);
+            restaurarMultiusuario();
+            cargarMenu(); 
         }
     }
 
@@ -412,6 +422,18 @@ public class RegistroVista extends AppLayout {
         String total = pinField.getValue();
         if (total.length() < 4) {
             pinField.setValue(total + numero);
+        }
+    }
+    
+    public String obtenerOrigen() {
+        String os = System.getProperty("os.name").toLowerCase();  
+
+        if (os.contains("win") || os.contains("mac") || os.contains("nux")) {
+            return "W";
+       // } else if (userAgent.contains("android") || userAgent.contains("iphone") || userAgent.contains("ipad")) {
+       //   return "T"; 
+        } else {
+        	return "M"; 
         }
     }
 }

@@ -20,7 +20,7 @@ public class Usuario {
 	@Column(name = "email", length = 255)
     private String email;
 	
-	@Column(name = "nif", nullable = false, length = 30)
+	@Column(name = "nif", length = 30)
     private String nif;
 	
 	@Column(name = "login_usuario", nullable = false, length = 15)
@@ -36,17 +36,17 @@ public class Usuario {
 	@Column(name = "rol", nullable = false)
     private Integer rol;
 	
-	@Column(name = "cod_personal", nullable = false)
+	@Column(name = "cod_personal")
     private Integer codPersonal;
 	
-	@Column(name = "pin", nullable = false, length = 4)
+	@Column(name = "pin", length = 4)
     private String pin;
 	
 	@Column(name = "activo", nullable = false)
     private Integer activo = 1;
 	
 	@Column(name = "fichaje_manual", nullable = false)
-    private Integer fichajeManual = 1;
+    private Integer fichajeManual = 0;
 	
 	@Column(name = "creado", nullable = false)
     private LocalDateTime  creado;
