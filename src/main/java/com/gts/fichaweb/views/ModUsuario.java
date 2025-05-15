@@ -97,13 +97,17 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
         enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
         enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceRegistros = new Anchor("registro", "Registros");
+        enlaceRegistros.getElement().setAttribute("href", "/modregistros");
+        enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioLogueado.getRol() != 1) {
+        if (usuarioLogueado.getRol() != 2) {
             menuIzquierdo.add(botonEmpresa);
         }
         
-        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
@@ -165,7 +169,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
 
         Select<String> campo9 = new Select<>();
         campo9.setLabel("Rol");
-        if (usuarioLogueado.getRol() == 1) {
+        if (usuarioLogueado.getRol() == 2) {
             campo9.setItems("Supervisor", "Trabajador", "Multiusuario");
         } else {
             campo9.setItems("Administrador", "Supervisor", "Trabajador", "Multiusuario");
@@ -181,7 +185,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         campo11.setLabel("Empresa");
         campo11.setWidth("300px");
 
-        if (usuarioLogueado.getRol() == 1) {
+        if (usuarioLogueado.getRol() == 2) {
             Empresa empresaUsuario = usuarioLogueado.getEmpresa();
             String nombreEmpresa = empresaUsuario.getNombreComercial();
             campo11.setItems(nombreEmpresa);
@@ -310,20 +314,20 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
 
     private String getRol(int rol) {
         switch (rol) {
-            case 0: return "Administrador";
-            case 1: return "Supervisor";
-            case 2: return "Trabajador";
+            case 1: return "Administrador";
+            case 2: return "Supervisor";
             case 3: return "Multiusuario";
+            case 4: return "Trabajador";
             default: return "Desconocido";
         }
     }
 
     private int getRolNumerico(String rol) {
         switch (rol) {
-            case "Administrador": return 0;
-            case "Supervisor": return 1;
-            case "Trabajador": return 2;
+            case "Administrador": return 1;
+            case "Supervisor": return 2;
             case "Multiusuario": return 3;
+            case "Trabajador": return 4;
             default: return -1;
         }
     }

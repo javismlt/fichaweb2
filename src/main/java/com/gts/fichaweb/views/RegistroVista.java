@@ -33,7 +33,6 @@ public class RegistroVista extends AppLayout {
     private Usuario usuarioActual;
     private Usuario usuarioAnterior;
     private Usuario usuarioActualAux;
-    String userAgent = "user-agent-string-from-client"; 
 
     private Button boton1;
     private Button boton2;
@@ -134,18 +133,18 @@ public class RegistroVista extends AppLayout {
                 aplicarEstiloBoton(boton3, false);  
                 aplicarEstiloBoton(boton4, false);  
                 aplicarEstiloBoton(boton5, true);   
-            } else if ("ENTRADA".equals(accionUltimoRegistro) || ("REANUDACION".equals(accionUltimoRegistro))) { 
+            } else if ("ENTRADA".equals(accionUltimoRegistro) || ("RETORNO".equals(accionUltimoRegistro))) { 
                 aplicarEstiloBoton(boton1, false);   
                 aplicarEstiloBoton(boton2, true);  
                 aplicarEstiloBoton(boton3, false);  
                 aplicarEstiloBoton(boton4, true);  
-                aplicarEstiloBoton(boton5, false);   
+                aplicarEstiloBoton(boton5, true);   
             } else if ("PAUSA".equals(accionUltimoRegistro)) { 
                 aplicarEstiloBoton(boton1, false);   
                 aplicarEstiloBoton(boton2, false); 
                 aplicarEstiloBoton(boton3, true);  
                 aplicarEstiloBoton(boton4, false); 
-                aplicarEstiloBoton(boton5, false); 
+                aplicarEstiloBoton(boton5, true); 
             } else {
                 aplicarEstiloBoton(boton1, true);   
                 aplicarEstiloBoton(boton2, false);  
@@ -311,7 +310,7 @@ public class RegistroVista extends AppLayout {
             registroEntrada.setHora(LocalDateTime.now().toLocalTime());
             registroEntrada.setAccion("ENTRADA");
             registroEntrada.setObservaciones("Entrada de personal");
-            registroEntrada.setValidado(0);
+            registroEntrada.setValidado(1);
             registroEntrada.setOrigen(obtenerOrigen());
 
             registroRepositorio.save(registroEntrada);
@@ -331,7 +330,7 @@ public class RegistroVista extends AppLayout {
             registroSalida.setHora(LocalDateTime.now().toLocalTime());
             registroSalida.setAccion("SALIDA");
             registroSalida.setObservaciones("Salida de personal");
-            registroSalida.setValidado(0);
+            registroSalida.setValidado(1);
             registroSalida.setOrigen(obtenerOrigen());
             registroSalida.setIdAsociado(idUltimaEntrada);
 
@@ -352,7 +351,7 @@ public class RegistroVista extends AppLayout {
             registroPausa.setHora(LocalDateTime.now().toLocalTime());
             registroPausa.setAccion("PAUSA");
             registroPausa.setObservaciones("Pausa de la jornada");
-            registroPausa.setValidado(0);
+            registroPausa.setValidado(1);
             registroPausa.setOrigen(obtenerOrigen());
             registroPausa.setIdAsociado(idUltimaEntrada);
 
@@ -371,9 +370,9 @@ public class RegistroVista extends AppLayout {
         	registroReanudacion.setUsuarioId(usuario);  
         	registroReanudacion.setFechaRegistro(LocalDate.now());
         	registroReanudacion.setHora(LocalDateTime.now().toLocalTime());
-        	registroReanudacion.setAccion("REANUDACION");
+        	registroReanudacion.setAccion("RETORNO");
         	registroReanudacion.setObservaciones("Reanudación de la jornada");
-        	registroReanudacion.setValidado(0);
+        	registroReanudacion.setValidado(1);
         	registroReanudacion.setOrigen(obtenerOrigen());
         	registroReanudacion.setIdAsociado(idUltimaPausa);
 
@@ -430,8 +429,6 @@ public class RegistroVista extends AppLayout {
 
         if (os.contains("win") || os.contains("mac") || os.contains("nux")) {
             return "W";
-       // } else if (userAgent.contains("android") || userAgent.contains("iphone") || userAgent.contains("ipad")) {
-       //   return "T"; 
         } else {
         	return "M"; 
         }

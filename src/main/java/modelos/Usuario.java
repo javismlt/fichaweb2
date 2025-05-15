@@ -2,6 +2,7 @@ package modelos;
 
 import jakarta.persistence.*;
 import java.time.*;
+import modelos.Roles; 
 
 @Entity
 @Table(name = "USUARIOS")
@@ -33,8 +34,12 @@ public class Usuario {
 	@JoinColumn(name = "empresa_id", referencedColumnName = "id", nullable = false)
 	private Empresa empresa;  
 	
-	@Column(name = "rol", nullable = false)
-    private Integer rol;
+	//@Column(name = "rol", nullable = false)
+    //private Integer rol;
+	
+	@ManyToOne
+    @JoinColumn(name = "rol", referencedColumnName = "id", nullable = false)
+    private Roles rol;
 	
 	@Column(name = "cod_personal")
     private Integer codPersonal;
@@ -120,11 +125,12 @@ public class Usuario {
     }
 
     public Integer getRol() {
-        return rol;
+        return rol.getId();
     }
 
-    public void setRol(Integer rol) {
-        this.rol = rol;
+    public void setRol(Integer rolId) {
+        this.rol = new Roles();
+        this.rol.setId(rolId);
     }
 
     public Integer getCodPersonal() {

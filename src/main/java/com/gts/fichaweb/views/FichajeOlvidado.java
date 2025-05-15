@@ -283,7 +283,7 @@ public class FichajeOlvidado extends AppLayout{
             registro.setUsuarioId(usuario);  
             registro.setFechaRegistro(fecha);
             registro.setHora(horaReanudacion);
-            registro.setAccion("REANUDACION");
+            registro.setAccion("RETORNO");
             registro.setObservaciones("Reanudación fichaje manual");
             registro.setOrigen("N");
             registro.setValidado(0);

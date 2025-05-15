@@ -38,6 +38,8 @@ public class Registro {
 	@Column(name = "origen", length = 10)
 	private String origen;
 
+	@Column(name = "activo", nullable = false)
+    private Integer activo = 1;
 	
 	public Integer getId() {
 		return id;
@@ -110,5 +112,12 @@ public class Registro {
 	public void setOrigen(String origen) {
 		this.origen = origen;
 	}
+	
+	public Integer getActivo() {
+        return activo;
+    }
 
+    public void setActivo(Integer activo) {
+        this.activo = activo;
+    }
 }

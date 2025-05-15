@@ -45,7 +45,7 @@ public class ListEmpresas extends AppLayout {
             getElement().executeJs("window.location.href='/'");
         } else {
             this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
-            if (usuarioActual.getRol() == 0 || usuarioActual.getRol() == 1) {
+            if (usuarioActual.getRol() == 1 || usuarioActual.getRol() == 2) {
             	crearHeader(nombreUsuario);
             	mostrarEmpresas();
             } else {
@@ -74,13 +74,17 @@ public class ListEmpresas extends AppLayout {
         Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
         enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
         enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceRegistros = new Anchor("registro", "Registros");
+        enlaceRegistros.getElement().setAttribute("href", "/modregistros");
+        enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioActual.getRol() != 1) {
+        if (usuarioActual.getRol() != 2) {
             menuIzquierdo.add(botonEmpresa);
         }
         
-        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
@@ -113,7 +117,7 @@ public class ListEmpresas extends AppLayout {
         titulo.getStyle().set("margin-top", "8px").set("text-align", "center");
         List<Empresa> empresas; 
         
-        if (usuarioActual.getRol() == 1) {
+        if (usuarioActual.getRol() == 2) {
             Integer empresaId = usuarioActual.getEmpresa().getId();
             Empresa empresa = empresaRepositorio.findById(empresaId).orElseThrow();
             empresas = List.of(empresa);

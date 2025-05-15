@@ -39,14 +39,14 @@ public class ListUsuarios extends AppLayout {
     public ListUsuarios(UsuarioRepositorio usuarioRepositorio, EmpresaRepositorio empresaRepositorio, RegistroRepositorio registroRepositorio) {
         this.usuarioRepositorio = usuarioRepositorio;
         this.empresaRepositorio = empresaRepositorio;
-        this.registroRepositorio = registroRepositorio;  
+        this.registroRepositorio = registroRepositorio;
 
         String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
         if (nombreUsuario == null) {
             getElement().executeJs("window.location.href='/'");
         } else {
             this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
-            if (usuarioActual.getRol() == 0 || usuarioActual.getRol() == 1) {
+            if (usuarioActual.getRol() == 1 || usuarioActual.getRol() == 2) {
             	crearHeader(nombreUsuario);
                 mostrarUsuarios();
             } else {
@@ -83,13 +83,17 @@ public class ListUsuarios extends AppLayout {
         Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
         enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
         enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceRegistros = new Anchor("registro", "Registros");
+        enlaceRegistros.getElement().setAttribute("href", "/modregistros");
+        enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioActual.getRol() != 1) {
+        if (usuarioActual.getRol() != 2) {
             menuIzquierdo.add(botonEmpresa);
         }
         
-        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
@@ -129,7 +133,7 @@ public class ListUsuarios extends AppLayout {
         UsuariosActivos = new Span();
         actualizarCantidadUsuarios();
 
-        if (usuarioActual.getRol() == 1) {
+        if (usuarioActual.getRol() == 2) {
         	UsuariosActivos.getStyle().set("font-size", "16px");
             contenedorCentro.add(UsuariosActivos);
         }
@@ -140,7 +144,7 @@ public class ListUsuarios extends AppLayout {
         listaUsuarios.setAlignItems(Alignment.CENTER); 
         listaUsuarios.setWidthFull();  
 
-        if (usuarioActual.getRol() == 0) {
+        if (usuarioActual.getRol() == 1) {
             Select<Empresa> selectEmpresa = new Select<>();
             List<Empresa> empresas = empresaRepositorio.findAll();
             selectEmpresa.setItems(empresas);
@@ -303,7 +307,7 @@ public class ListUsuarios extends AppLayout {
         int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
         UsuariosActivos.setText("Usuarios " + cantidadUsuarios + " de " + maxEmpleados);
 
-        if (cantidadUsuarios >= maxEmpleados && usuarioActual.getRol() == 1) {
+        if (cantidadUsuarios >= maxEmpleados && usuarioActual.getRol() == 2) {
             botonUsuario.setEnabled(false); 
             botonUsuario.getStyle().set("background-color", "#bfbfbf"); 
         } else {

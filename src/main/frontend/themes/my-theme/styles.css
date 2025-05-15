@@ -1,58 +1,48 @@
-	@media (max-width: 765px) {
-	    .fechas-layout {
-	        display: flex;
-	        flex-direction: column;
-	        align-items: center;
-	        margin-left: 0;
-	        margin-bottom: 0;
-	    }
-	
-	    .horas-trabajadas-label {
-	        display: flex;
-	        justify-content: center;
-	        align-items: center;
-	        width: fit-content;
-	    }
-	
-	    .fechas-layout > * {
-	        width: 100%;           
-	        margin-bottom: 0;
-	    }
-	
-	    .botones-layout {
-	        display: flex;
-	        flex-wrap: nowrap;
-	        justify-content: center; 
-	        align-items: center;    
-	        gap: 5px;             
-	        margin-left: 0;
-	        margin-bottom: 0;
-	        width: 100%;            
-	        text-align: center;     
-	    }
-	
-	    .botones-layout > * {
-	        width: auto; 
-	        margin-bottom: 0;
-	    }
-	}
+@media (max-width: 765px) {
+    .fechas-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-left: 0;
+        margin-bottom: 0;
+    }
 
-	:host(.responsive-grid) .fecha-column,
-	:host(.responsive-grid) .accion-column {
-	    width: auto;
-	    flex-grow: 1;
-	}
+    .horas-trabajadas-label {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: fit-content;
+    }
 
-	@media (max-width: 765px) {
-		:host(.responsive-grid) .fecha-column {
-		    width: 125px !important;
-		    flex-grow: 0 !important;
-		}
-	
-		:host(.responsive-grid) .accion-column {
-		    width: 110px !important;
-		    flex-grow: 0 !important;
-		}
-	}
+    .fechas-layout > * {
+        width: 100%;           
+        margin-bottom: 0;
+    }
 
+    .botones-layout {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: center; 
+        align-items: center;    
+        gap: 5px;             
+        margin-left: 0;
+        margin-bottom: 0;
+        width: 100%;            
+        text-align: center;     
+    }
+
+    .botones-layout > * {
+        width: 50%; 
+        margin-bottom: 0;
+    }
+
+    #vaadin-grid-cell-0 {
+        width: 125px !important;
+        flex-grow: 0 !important;
+    }
+
+    #vaadin-grid-cell-1 {
+        width: 120px !important;
+        flex-grow: 0 !important;
+    }
 }

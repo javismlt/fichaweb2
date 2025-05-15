@@ -108,13 +108,17 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
         enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
         enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceRegistros = new Anchor("registro", "Registros");
+        enlaceRegistros.getElement().setAttribute("href", "/modregistros");
+        enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioLogueado.getRol() != 1) {
+        if (usuarioLogueado.getRol() != 2) {
             menuIzquierdo.add(botonEmpresa);
         }
         
-        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
@@ -190,21 +194,21 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9)
             .forEach(tf -> tf.setWidth("300px"));
 
-        if (usuarioLogueado.getRol() == 0) {
+        if (usuarioLogueado.getRol() == 1) {
             Stream.of(campo10, campo11, campo12, campo13, campo14).forEach(tf -> tf.setWidth("300px"));
         }
 
         Button btnActualizar = new Button("Actualizar");
         btnActualizar.setWidth("100px");
         btnActualizar.setHeight("40px");
-        if (usuarioLogueado.getRol() == 0) {
+        if (usuarioLogueado.getRol() == 1) {
         	btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
         } else {
         	btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
         }
         
         btnActualizar.addClickListener(e -> {
-            if (usuarioLogueado.getRol() == 0) {
+            if (usuarioLogueado.getRol() == 1) {
                 actualizarEmpresa(
                     empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),
                     campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(),
@@ -223,7 +227,7 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         VerticalLayout columnaIzquierda;
         VerticalLayout layoutFormulario = new VerticalLayout();
 
-        if (usuarioLogueado.getRol() == 0) {
+        if (usuarioLogueado.getRol() == 1) {
             columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7);
             columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, campo14);
             HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
@@ -285,13 +289,13 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);
 
         if (empresa.getMultiusuario() == 0) {
-            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol(empresa.getId(), 3);
+            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol_Id(empresa.getId(), 3);
             usuarios.ifPresent(usuario -> {
                 usuario.setActivo(0);
                 usuarioRepositorio.save(usuario);
             });
         } else {
-            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol(empresa.getId(), 3);
+            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol_Id(empresa.getId(), 3);
             if (!usuarios.isPresent()) {
                 registrarUsuarioMultiusuario(empresa);
             } else {

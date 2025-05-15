@@ -1,7 +1,6 @@
 package com.gts.fichaweb.views;
 
 import java.util.stream.Stream;
-
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
@@ -59,7 +58,7 @@ public class AddUsuario extends AppLayout{
         	getElement().executeJs("window.location.href='/'");
         } else {
             this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
-            if (usuarioActual.getRol() == 0 || usuarioActual.getRol() == 1) {
+            if (usuarioActual.getRol() == 1 || usuarioActual.getRol() == 2) {
             	crearHeader(nombreUsuario);
             	crearFormulario();
             } else {
@@ -88,13 +87,17 @@ public class AddUsuario extends AppLayout{
         Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
         enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
         enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceRegistros = new Anchor("registro", "Registros");
+        enlaceRegistros.getElement().setAttribute("href", "/modregistros");
+        enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioActual.getRol() != 1) {
+        if (usuarioActual.getRol() != 2) {
             menuIzquierdo.add(botonEmpresa);
         }
         
-        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
@@ -178,7 +181,7 @@ public class AddUsuario extends AppLayout{
 
 	    final int[] rolSeleccionado = new int[1];
 
-	    if (usuarioActual.getRol() == 1) {
+	    if (usuarioActual.getRol() == 2) {
 	        campo9.setItems("Supervisor", "Trabajador", "Multiusuario");
 	    } else {
 	        campo9.setItems("Administrador", "Supervisor", "Trabajador", "Multiusuario");
@@ -187,13 +190,13 @@ public class AddUsuario extends AppLayout{
 	    campo9.addValueChangeListener(event -> {
 	        String selectedRole = event.getValue();
 	        if ("Administrador".equals(selectedRole)) {
-	            rolSeleccionado[0] = 0; 
+	            rolSeleccionado[0] = 1; 
 	        } else if ("Supervisor".equals(selectedRole)) {
-	            rolSeleccionado[0] = 1;  
-	        } else if ("Trabajador".equals(selectedRole)) {
-	            rolSeleccionado[0] = 2;  
+	            rolSeleccionado[0] = 2;
 	        } else if ("Multiusuario".equals(selectedRole)) {
 	            rolSeleccionado[0] = 3;  
+	        } else if ("Trabajador".equals(selectedRole)) {
+	            rolSeleccionado[0] = 4; 
 	        }
 	    });
 	    
@@ -206,7 +209,7 @@ public class AddUsuario extends AppLayout{
 	    campo11.setLabel("Empresa");
 	    campo11.setWidth("300px");
 
-	    if (usuarioActual.getRol() == 1) {
+	    if (usuarioActual.getRol() == 2) {
 	        Empresa empresaUsuario = usuarioActual.getEmpresa();
 	        String nombreEmpresa = empresaUsuario.getNombreComercial();
 	        campo11.setItems(nombreEmpresa); 
@@ -252,6 +255,12 @@ public class AddUsuario extends AppLayout{
 	
 	
 	private void registrarUsuario(String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
+		Usuario usuarioExistente = usuarioRepositorio.findByLoginUsuario(usuarioLogin);
+	    if (usuarioExistente != null) {
+	    	Notification.show("Nombre de Usuario Login ya existente", 2000, Notification.Position.TOP_CENTER);
+	    	return;
+	    }
+		    
 		Usuario usuario = new Usuario();
 		usuario.setNombre(Nombre);
 		usuario.setTelefono(Telefono);
@@ -329,7 +338,7 @@ public class AddUsuario extends AppLayout{
 	                String codPersonal = partes[6].trim();
 	                String pin = partes[7].trim();
 
-	                registrarUsuario(nombre, telefono, email, nif, usuarioLogin, password, codPersonal, pin, 2, "1", usuarioActual.getEmpresa().getNombreComercial());
+	                registrarUsuario(nombre, telefono, email, nif, usuarioLogin, password, codPersonal, pin, 4, "1", usuarioActual.getEmpresa().getNombreComercial());
 	            }
 	            Notification.show("Importación completada", 2000, Notification.Position.TOP_CENTER);
 	        } catch (IOException ex) {

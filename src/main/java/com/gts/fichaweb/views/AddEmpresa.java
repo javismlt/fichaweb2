@@ -40,7 +40,7 @@ public class AddEmpresa extends AppLayout{
         	getElement().executeJs("window.location.href='/'");
         } else {
             this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
-            if (usuarioActual == null || usuarioActual.getRol() != 0) {
+            if (usuarioActual == null || usuarioActual.getRol() != 1) {
             	Notification.show("Acceso denegado: no tienes permisos suficientes", 2000, Notification.Position.TOP_CENTER);
             	getElement().executeJs("setTimeout(() => window.location.href='/registro', 2000)");
                 return;
@@ -68,8 +68,12 @@ public class AddEmpresa extends AppLayout{
         Anchor enlaceUsuarios = new Anchor("usuario", "Usuarios");
         enlaceUsuarios.getElement().setAttribute("href", "/listusuarios");
         enlaceUsuarios.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor enlaceRegistros = new Anchor("registro", "Registros");
+        enlaceRegistros.getElement().setAttribute("href", "/modregistros");
+        enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
-        HorizontalLayout menuIzquierdo = new HorizontalLayout(botonEmpresa, botonUsuario, enlaceEmpresas, enlaceUsuarios);
+        HorizontalLayout menuIzquierdo = new HorizontalLayout(botonEmpresa, botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 

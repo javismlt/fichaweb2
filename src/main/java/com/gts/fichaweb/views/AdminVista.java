@@ -77,7 +77,7 @@ public class AdminVista extends VerticalLayout{
         		Notification.show("Usuario desactivado", 2000, Notification.Position.TOP_CENTER);
         		return;
         	}
-        	if(usuario.getRol() == 0 || usuario.getRol() == 1) {
+        	if(usuario.getRol() == 1 || usuario.getRol() == 2) {
         		VaadinSession.getCurrent().setAttribute("username", usuario.getLoginUsuario());
         		Notification.show("Bienvenido, " + usuario.getNombre(), 2000, Notification.Position.TOP_CENTER);
                 UI.getCurrent().access(() -> {
