@@ -28,7 +28,6 @@ import java.util.Optional;
 @Route("recuperar")
 @PermitAll
 public class FormularioRecuperacion extends VerticalLayout {
-
     private final UsuarioRepositorio usuarioRepositorio;
     private final PasswordTokenRepositorio passwordTokenRepo;
     private final EmailServicio emailServicio;
@@ -78,6 +77,7 @@ public class FormularioRecuperacion extends VerticalLayout {
         });
     }
 
+    
     private void crearToken(String email) {
         Optional<Usuario> usuario = usuarioRepositorio.findByEmail(email);
         if (usuario.isEmpty()) return;

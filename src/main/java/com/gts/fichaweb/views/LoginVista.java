@@ -19,7 +19,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.vaadin.flow.component.html.Anchor;
 
 @Route("")
-
 public class LoginVista extends VerticalLayout {
 
     private final UsuarioRepositorio usuarioRepositorio;
@@ -78,6 +77,9 @@ public class LoginVista extends VerticalLayout {
         		return;
         	} else if(usuario.getEmpresa().getActivo() == 0)  {
         		Notification.show("Empresa desactivada", 2000, Notification.Position.TOP_CENTER);
+        		return;
+        	} else if(usuario.getRol() == 1 || usuario.getRol() == 2 || usuario.getRol() == 5)  {
+        		Notification.show("Acceso denegado", 2000, Notification.Position.TOP_CENTER);
         		return;
         	}
             VaadinSession.getCurrent().setAttribute("username", usuario.getLoginUsuario());

@@ -11,6 +11,7 @@ import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.component.applayout.AppLayout;
 import modelos.Usuario;
 import modelos.Registro;
+import modelos.Solicitudes;
 import repositorios.RegistroRepositorio;
 import repositorios.UsuarioRepositorio;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -46,21 +47,24 @@ import com.vaadin.flow.component.dependency.CssImport;
 import modelos.Logs_modificaciones;
 import repositorios.Logs_modificacionesRepositorio;
 import com.vaadin.flow.data.renderer.LocalDateTimeRenderer;
+import repositorios.SolicitudesRepositorio;
 
 @Route("consulta")
 @CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class ConsultaVista extends AppLayout {
     private final UsuarioRepositorio usuarioRepositorio;
     private final RegistroRepositorio registroRepositorio; 
+    private final SolicitudesRepositorio solicitudesRepositorio;  
     private Usuario usuarioActual;
     private Grid<Registro> grid;
     private Span totalHorasTrabajadasLabel;
     private DatePicker fechaInicio;
     private DatePicker fechaFin;
 
-    public ConsultaVista(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio) {
+    public ConsultaVista(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, SolicitudesRepositorio solicitudesRepositorio) {
         this.registroRepositorio = registroRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
+        this.solicitudesRepositorio = solicitudesRepositorio; 
         
         String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
         if (nombreUsuario == null) {
@@ -83,7 +87,19 @@ public class ConsultaVista extends AppLayout {
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout(registro, consulta);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
+        
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        menuResponsive.addItem("Registro", e -> UI.getCurrent().navigate("registro"));
+        menuResponsive.addItem("Consulta", e -> UI.getCurrent().navigate("consulta"));
+
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
 
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
@@ -99,7 +115,7 @@ public class ConsultaVista extends AppLayout {
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -128,27 +144,91 @@ public class ConsultaVista extends AppLayout {
         grid.addClassName("responsive-grid");
         
         grid.addColumn(registro -> registro.getFechaRegistro().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))).setHeader("Fecha").setAutoWidth(true);
+        grid.addColumn(registro -> registro.getAccion()).setHeader("Acción").setAutoWidth(true);
+        grid.addColumn(registro -> {LocalTime hora = registro.getHora();return hora != null ? hora.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "";}).setHeader("Hora");
         grid.addColumn(new ComponentRenderer<>(registro -> {
-            Span span = new Span(registro.getAccion());
+            Span span = new Span();
             if (Integer.valueOf(1).equals(registro.getValidado())) {
-                span.getStyle().set("color", "black");
+                span.add("🟢");
             } else if (Integer.valueOf(0).equals(registro.getValidado())) {
-                span.getStyle().set("color", "red");
+            	span.add("🔴");
             }
             return span;
-        })).setHeader("Acción").setAutoWidth(true);
-        grid.addColumn(registro -> {LocalTime hora = registro.getHora();return hora != null ? hora.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "";}).setHeader("Hora");
+        })).setHeader("Validado").setAutoWidth(true);
         grid.addColumn(Registro::getObservaciones).setHeader("Observaciones");
+        
+        grid.addSelectionListener(event -> {
+            event.getFirstSelectedItem().ifPresent(registro -> {
+                Dialog dialog = new Dialog();
+                dialog.setWidth("500px");
+
+                dialog.setCloseOnEsc(true);
+                dialog.setCloseOnOutsideClick(true);
+
+                Span titulo = new Span("Detalles del Registro");
+                titulo.getStyle().set("font-weight", "bold").set("font-size", "18px");
+
+                VerticalLayout contenido = new VerticalLayout();
+                
+                Span fechaSpan = new Span("Fecha: " + registro.getFechaRegistro());
+                Span accionSpan = new Span("Acción: " + registro.getAccion());
+                Span observacionesSpan = new Span("Observaciones: " + registro.getObservaciones());
+
+                LocalTime hora = registro.getHora();
+                String horaFormateada = hora != null ? hora.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "N/A";
+                
+                Span horaSpan = new Span("Hora: " + horaFormateada);
+                TextField horaTextField = new TextField("Hora");
+                horaTextField.setValue(horaFormateada);
+                horaTextField.setVisible(false);  
+                horaTextField.setWidthFull();
+                
+                contenido.add(fechaSpan, accionSpan, horaSpan, horaTextField, observacionesSpan);
+
+                Button actualizar = new Button("Solicitar cambio");
+                actualizar.setVisible(false);  
+                actualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+
+                Button modificar = new Button("Modificar");
+                modificar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+
+                modificar.addClickListener(e -> {
+                    horaSpan.setVisible(false);
+                    horaTextField.setVisible(true);
+                    modificar.setVisible(false);
+                    actualizar.setVisible(true);
+                });
+
+                actualizar.addClickListener(e -> {
+                     LocalTime nuevaHora = LocalTime.parse(horaTextField.getValue(), DateTimeFormatter.ofPattern("HH:mm:ss"));
+                     String nuevaHoraStr = (nuevaHora != null) ? nuevaHora.format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "N/A";
+                     String nombreCampo = "hora";
+                     
+                     boolean solicitado = registroSolicitud(registro, nombreCampo, nuevaHoraStr, registro.getAccion());
+                     if (solicitado) {
+                    	 registro.setValidado(0);
+                         registroRepositorio.save(registro);
+                     }
+                     
+                     Notification.show("Modificación solicitada correctamente", 2000, Notification.Position.TOP_CENTER);
+                     actualizarGrid(fechaInicio.getValue(), fechaFin.getValue());
+                     dialog.close();
+                });
+                HorizontalLayout botones = new HorizontalLayout(modificar, actualizar);
+                dialog.add(titulo, contenido, botones);
+                dialog.open();
+            });
+        });
         
         if (usuarioActual.getRol() == 3) {
         	Select<Usuario> selectUsuarios = new Select<>();
             selectUsuarios.setLabel("Usuarios");
             
             List<Usuario> usuariosDeLaEmpresa = usuarioRepositorio.findByEmpresaId(usuarioActual.getEmpresa().getId());
-            usuariosDeLaEmpresa = usuariosDeLaEmpresa.stream().filter(usuario -> usuario.getRol() != 3 && usuario.getActivo() != 0).collect(Collectors.toList());
+            usuariosDeLaEmpresa = usuariosDeLaEmpresa.stream().filter(usuario -> usuario.getRol() == 4 && usuario.getActivo() == 1).collect(Collectors.toList());
 
             selectUsuarios.setItems(usuariosDeLaEmpresa);
-            selectUsuarios.setItemLabelGenerator(Usuario::getNombre);
+            selectUsuarios.setItemLabelGenerator(Usuario::getLoginUsuario);
             selectUsuarios.setPlaceholder("Seleccione un usuario");
             fechasLayout.add(selectUsuarios);
             Dialog pinDialog = new Dialog();
@@ -278,7 +358,8 @@ public class ConsultaVista extends AppLayout {
         if (fechaInicio != null && fechaFin != null) {
         	registros = registroRepositorio.findByFechaRegistroBetweenAndUsuario_IdAndActivo(fechaInicio, fechaFin, usuarioActual.getId().intValue(),1);
         } else {
-            registros = registroRepositorio.findByUsuario_IdAndActivo(usuarioActual.getId().intValue(),1);
+        	LocalDate hoy = LocalDate.now();
+            registros = registroRepositorio.findByFechaRegistroAndUsuario_IdAndActivo(hoy, usuarioActual.getId().intValue(), 1);
         }
         registros.sort(
         	    Comparator.comparing(Registro::getFechaRegistro, Comparator.reverseOrder())
@@ -291,40 +372,69 @@ public class ConsultaVista extends AppLayout {
     }
     
     private String calcularHorasTrabajadas(List<Registro> registros) {
-        Duration totalDuration = Duration.ZERO;
+        registros.sort((r1, r2) -> {
+            int cmpFecha = r1.getFechaRegistro().compareTo(r2.getFechaRegistro());
+            if (cmpFecha != 0) return cmpFecha;
+            return r1.getHora().compareTo(r2.getHora());
+        });
+
+        Duration totalTrabajado = Duration.ZERO;
         Duration totalDescanso = Duration.ZERO;
 
-        for (Registro salida : registros) {
-            if ("salida".equalsIgnoreCase(salida.getAccion()) && salida.getIdAsociado() != null) {
-                Registro entrada = registros.stream()
-                        .filter(r -> r.getId().equals(salida.getIdAsociado()))
-                        .findFirst()
-                        .orElse(null);
+        LocalTime inicioIntervalo = null;  
+        LocalTime inicioDescanso = null; 
 
-                if (entrada != null && entrada.getHora() != null && salida.getHora() != null) {
-                    Duration duration = Duration.between(entrada.getHora(), salida.getHora());
-                    totalDuration = totalDuration.plus(duration);
-                }
-            }
+        for (Registro reg : registros) {
+            String accion = reg.getAccion().toLowerCase();
+            LocalTime hora = reg.getHora();
 
-            if ("pausa".equalsIgnoreCase(salida.getAccion()) && salida.getHora() != null) {
-                Registro reanudacion = registros.stream()
-                        .filter(r -> "reanudacion".equalsIgnoreCase(r.getAccion()) && salida.getId().equals(r.getIdAsociado()))
-                        .findFirst()
-                        .orElse(null);
+            if (hora == null) continue;  
 
-                if (reanudacion != null && reanudacion.getHora() != null) {
-                    Duration descanso = Duration.between(salida.getHora(), reanudacion.getHora());
-                    totalDescanso = totalDescanso.plus(descanso);
-                }
+            switch (accion) {
+                case "entrada":
+                case "reanudacion":
+                    if (inicioDescanso != null) {
+                        Duration descanso = Duration.between(inicioDescanso, hora);
+                        totalDescanso = totalDescanso.plus(descanso);
+                        inicioDescanso = null;
+                    }
+                    if (inicioIntervalo == null) {
+                        inicioIntervalo = hora;
+                    }
+                    break;
+
+                case "pausa":
+                    if (inicioIntervalo != null) {
+                        Duration trabajado = Duration.between(inicioIntervalo, hora);
+                        totalTrabajado = totalTrabajado.plus(trabajado);
+                        inicioIntervalo = null;
+                    }
+                    inicioDescanso = hora;
+                    break;
+
+                case "salida":
+                    if (inicioIntervalo != null) {
+                        Duration trabajado = Duration.between(inicioIntervalo, hora);
+                        totalTrabajado = totalTrabajado.plus(trabajado);
+                        inicioIntervalo = null;
+                    }
+                    if (inicioDescanso != null) {
+                        Duration descanso = Duration.between(inicioDescanso, hora);
+                        totalDescanso = totalDescanso.plus(descanso);
+                        inicioDescanso = null;
+                    }
+                    break;
             }
         }
 
-        totalDuration = totalDuration.minus(totalDescanso);
-
-        long horas = totalDuration.toHours();
-        long minutos = (totalDuration.toMinutes() % 60);
-
+        registros.sort((r1, r2) -> {
+            int cmpFecha = r2.getFechaRegistro().compareTo(r1.getFechaRegistro());
+            if (cmpFecha != 0) return cmpFecha;
+            return r2.getHora().compareTo(r1.getHora());
+        });
+        
+        long horas = totalTrabajado.toHours();
+        long minutos = totalTrabajado.toMinutes() % 60;
         return String.format("%02d:%02d", horas, minutos);
     }
 
@@ -332,7 +442,7 @@ public class ConsultaVista extends AppLayout {
         List<Registro> registros = grid.getListDataView().getItems().collect(Collectors.toList());
 
         if (registros.isEmpty()) {
-            Notification.show("No hay registros para generar el PDF");
+            Notification.show("No hay registros para generar el PDF", 2000, Notification.Position.TOP_CENTER);
             return;
         }
         
@@ -345,6 +455,9 @@ public class ConsultaVista extends AppLayout {
 
         Paragraph titulo = new Paragraph("FichaWeb").setFontSize(28) .setBold(); 
         document.add(titulo);
+        
+        Paragraph titulo2 = new Paragraph("Registros de Jornada Laboral").setFontSize(14);
+        document.add(titulo2);
 
         Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + ")").setFontSize(12);
         document.add(usuarioParrafo);
@@ -369,11 +482,12 @@ public class ConsultaVista extends AppLayout {
         Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
         document.add(horasParrafo);
         
-        Table table = new Table(5);
+        Table table = new Table(6);
         table.addHeaderCell(new Cell().add(new Paragraph("FECHA")));
         table.addHeaderCell(new Cell().add(new Paragraph("ACCION")));
         table.addHeaderCell(new Cell().add(new Paragraph("HORA")));
         table.addHeaderCell(new Cell().add(new Paragraph("ORIGEN")));
+        table.addHeaderCell(new Cell().add(new Paragraph("ESTADO")));
         table.addHeaderCell(new Cell().add(new Paragraph("OBSERVACIONES")));
 
         for (Registro registro : registros) {
@@ -381,6 +495,7 @@ public class ConsultaVista extends AppLayout {
             table.addCell(new Cell().add(new Paragraph(registro.getAccion())));
             table.addCell(new Cell().add(new Paragraph(registro.getHora() != null ? registro.getHora().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "")));
             table.addCell(new Cell().add(new Paragraph(registro.getOrigen())));
+            table.addCell(new Cell().add(new Paragraph(registro.getValidado() == 1 ? "VALIDADO" : "NO VALIDADO")));
             table.addCell(new Cell().add(new Paragraph(registro.getObservaciones())));
         }
 
@@ -408,7 +523,7 @@ public class ConsultaVista extends AppLayout {
         List<Registro> registros = grid.getListDataView().getItems().collect(Collectors.toList());
 
         if (registros.isEmpty()) {
-            Notification.show("No hay registros para generar el archivo Excel");
+        	Notification.show("No hay registros para generar el EXCEL", 2000, Notification.Position.TOP_CENTER);
             return;
         }
 
@@ -445,24 +560,26 @@ public class ConsultaVista extends AppLayout {
         hoursRow.createCell(0).setCellValue("Total trabajado: " + horasTrabajadas + " horas");
         sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 4));
 
-        XSSFRow headerRow = sheet.createRow(4);
+        XSSFRow headerRow = sheet.createRow(5);
         headerRow.createCell(0).setCellValue("FECHA");
         headerRow.createCell(1).setCellValue("ACCION");
         headerRow.createCell(2).setCellValue("HORA");
         headerRow.createCell(3).setCellValue("ORIGEN");
-        headerRow.createCell(4).setCellValue("OBSERVACIONES");
+        headerRow.createCell(4).setCellValue("ESTADO");
+        headerRow.createCell(5).setCellValue("OBSERVACIONES");
 
-        int rowIndex = 5; 
+        int rowIndex = 6; 
         for (Registro registro : registros) {
             XSSFRow row = sheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(registro.getFechaRegistro().format(formatter));
             row.createCell(1).setCellValue(registro.getAccion());
             row.createCell(2).setCellValue(registro.getHora() != null ? registro.getHora().format(DateTimeFormatter.ofPattern("HH:mm:ss")) : "");
-            row.createCell(4).setCellValue(registro.getOrigen());
-            row.createCell(4).setCellValue(registro.getObservaciones());
+            row.createCell(3).setCellValue(registro.getOrigen());
+            row.createCell(4).setCellValue(registro.getValidado() == 1 ? "VALIDADO" : "NO VALIDADO");
+            row.createCell(5).setCellValue(registro.getObservaciones());
         }
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             sheet.autoSizeColumn(i);
         }
 
@@ -494,5 +611,21 @@ public class ConsultaVista extends AppLayout {
             pinField.setValue(total + numero);
         }
     }
+    
+    private boolean registroSolicitud(Registro registro, String campo, String valorNuevo, String accion) {
+        Solicitudes registroSolicitud = new Solicitudes();
+        Usuario Supervisor = usuarioRepositorio.findByEmpresaIdAndRolId(usuarioActual.getEmpresa().getId(), 2);
+        registroSolicitud.setRegistro(registro);
+        registroSolicitud.setSolicitante(usuarioActual);
+        registroSolicitud.setSolicitado(Supervisor);
+        registroSolicitud.setTipo("UPDATE");
+        registroSolicitud.setCampo(campo);
+        registroSolicitud.setValor(valorNuevo);
+        registroSolicitud.setAccion(accion);
+        registroSolicitud.setEstado("PROCESANDO");
+        
+        solicitudesRepositorio.save(registroSolicitud);
+        actualizarGrid(fechaInicio.getValue(), fechaFin.getValue());
+        return true;
+    }
 }
-

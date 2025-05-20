@@ -5,6 +5,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
@@ -42,6 +43,7 @@ import java.io.ByteArrayInputStream;
 import com.vaadin.flow.component.html.Image;
 
 @Route("addusuario")
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class AddUsuario extends AppLayout{
 
 	private final UsuarioRepositorio usuarioRepositorio;
@@ -70,16 +72,14 @@ public class AddUsuario extends AppLayout{
     }
 	
 	private void crearHeader(String nombreUsuario) {
-        Button botonEmpresa = new Button("Añadir Empresa", e -> {
-            UI.getCurrent().navigate("addempresa");
-        });
-        botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
-
-        Button botonUsuario = new Button("Añadir Usuario", e -> {
-            UI.getCurrent().navigate("addusuario");
-        });
-        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
-
+		Anchor botonEmpresa = new Anchor("empresa", "Añadir Empresa");
+        botonEmpresa.getElement().setAttribute("href", "/addempresa");
+        botonEmpresa.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor botonUsuario = new Anchor("usuario", "Añadir Usuario");
+        botonUsuario.getElement().setAttribute("href", "/addusuario");
+        botonUsuario.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
         enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
@@ -93,14 +93,31 @@ public class AddUsuario extends AppLayout{
         enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioActual.getRol() != 2) {
+        if (usuarioActual.getRol() == 1) {
             menuIzquierdo.add(botonEmpresa);
         }
         
         menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        if (usuarioActual.getRol() == 1) {
+        	menuResponsive.addItem("Añadir Empresa", e -> UI.getCurrent().navigate("addempresa"));
+        }
+        menuResponsive.addItem("Añadir Usuario", e -> UI.getCurrent().navigate("addusuario"));
+        menuResponsive.addItem("Empresas", e -> UI.getCurrent().navigate("listempresas"));
+        menuResponsive.addItem("Usuarios", e -> UI.getCurrent().navigate("listusuarios"));
+        menuResponsive.addItem("Registros", e -> UI.getCurrent().navigate("modregistros"));
+        
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
+        
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
 
@@ -115,7 +132,7 @@ public class AddUsuario extends AppLayout{
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -163,50 +180,46 @@ public class AddUsuario extends AppLayout{
 		tituloConBoton.setWidthFull();
 		tituloConBoton.getStyle().set("margin-bottom", "20px");
 
-	    TextField campo1 = new TextField("Nombre");
+	    TextField campo1 = new TextField("Nombre *");
 	    TextField campo2 = new TextField("Teléfono");
 	    campo2.setMaxLength(9);
-	    TextField campo3 = new TextField("Correo Electrónico");
+	    TextField campo3 = new TextField("Correo Electrónico *");
 	    TextField campo4 = new TextField("NIF");
 	    campo4.setMaxLength(9);
-	    TextField campo5 = new TextField("Usuario login");
-	    PasswordField  campo6 = new PasswordField ("Contraseña");
+	    TextField campo5 = new TextField("Usuario login *");
+	    PasswordField  campo6 = new PasswordField ("Contraseña *");
 	    TextField campo7 = new TextField("Codigo Personal");
 	    TextField campo8 = new TextField("Pin");
 	    campo8.setMaxLength(4);
 
 	    Select<String> campo9 = new Select<>();
-	    campo9.setLabel("Rol");
+	    campo9.setLabel("Rol *");
 	    campo9.setWidth("300px");
 
 	    final int[] rolSeleccionado = new int[1];
 
 	    if (usuarioActual.getRol() == 2) {
-	        campo9.setItems("Supervisor", "Trabajador", "Multiusuario");
+	        campo9.setItems("Trabajador");
 	    } else {
-	        campo9.setItems("Administrador", "Supervisor", "Trabajador", "Multiusuario");
+	        campo9.setItems("Administrador", "Trabajador");
 	    }
 
 	    campo9.addValueChangeListener(event -> {
 	        String selectedRole = event.getValue();
 	        if ("Administrador".equals(selectedRole)) {
-	            rolSeleccionado[0] = 1; 
-	        } else if ("Supervisor".equals(selectedRole)) {
-	            rolSeleccionado[0] = 2;
-	        } else if ("Multiusuario".equals(selectedRole)) {
-	            rolSeleccionado[0] = 3;  
+	            rolSeleccionado[0] = 1;  
 	        } else if ("Trabajador".equals(selectedRole)) {
 	            rolSeleccionado[0] = 4; 
 	        }
 	    });
 	    
 	    Select<String> campo10 = new Select<>();
-	    campo10.setLabel("Fichaje Manual");
+	    campo10.setLabel("Fichaje Manual *");
 	    campo10.setItems("Activar", "Desactivar");
 	    campo10.setWidth("300px");
 	    
 	    Select<String> campo11 = new Select<>();
-	    campo11.setLabel("Empresa");
+	    campo11.setLabel("Empresa *");
 	    campo11.setWidth("300px");
 
 	    if (usuarioActual.getRol() == 2) {
@@ -231,8 +244,10 @@ public class AddUsuario extends AppLayout{
 	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
 
 	    btnGuardar.addClickListener(e -> {
-	        registrarUsuario(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(),campo6.getValue(), campo7.getValue(), campo8.getValue(), rolSeleccionado[0], campo10.getValue(), campo11.getValue());
-	        limpiarFormulario(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11);
+	        boolean guardado = registrarUsuario(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(),rolSeleccionado[0], campo10.getValue(), campo11.getValue());
+	        if (guardado) {
+	        	 UI.getCurrent().navigate("listusuarios");
+	        }
 	    });
 	    
 	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
@@ -254,13 +269,7 @@ public class AddUsuario extends AppLayout{
 	}
 	
 	
-	private void registrarUsuario(String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
-		Usuario usuarioExistente = usuarioRepositorio.findByLoginUsuario(usuarioLogin);
-	    if (usuarioExistente != null) {
-	    	Notification.show("Nombre de Usuario Login ya existente", 2000, Notification.Position.TOP_CENTER);
-	    	return;
-	    }
-		    
+	private boolean registrarUsuario(String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
 		Usuario usuario = new Usuario();
 		usuario.setNombre(Nombre);
 		usuario.setTelefono(Telefono);
@@ -274,24 +283,45 @@ public class AddUsuario extends AppLayout{
 	    Empresa empresaObj = empresaRepositorio.findByNombreComercial(empresa).orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
 	    usuario.setEmpresa(empresaObj);
 
-	    boolean existeCodPersonal = usuarioRepositorio.existsByCodPersonalAndEmpresa_Id(Integer.parseInt(codPersonal), empresaObj.getId());
+	    Integer codPersonalInt = null;
 
-	    if (existeCodPersonal) {
-	        Notification.show("El código personal ya existe para esta empresa.", 3000, Notification.Position.TOP_CENTER);
-	        return;
+	    if (codPersonal != null && !codPersonal.trim().isEmpty()) {
+	        try {
+	            codPersonalInt = Integer.parseInt(codPersonal);
+	        } catch (NumberFormatException e) {
+	            Notification.show("El valor de código personal no es un número válido.", 2000, Notification.Position.TOP_CENTER);
+	            return false;
+	        }
 	    }
 
-	    usuario.setCodPersonal(Integer.parseInt(codPersonal));
+	    boolean existeCodPersonal = false;
+	    if (codPersonalInt != null) {
+	        existeCodPersonal = usuarioRepositorio.existsByCodPersonalAndEmpresa_Id(codPersonalInt, empresaObj.getId());
+	        if (existeCodPersonal) {
+	            Notification.show("El código personal ya existe para esta empresa.", 2000, Notification.Position.TOP_CENTER);
+	            return false;
+	        }
+	        usuario.setCodPersonal(codPersonalInt);
+	    } else {
+	        usuario.setCodPersonal(null);
+	    }
+
 		usuario.setPin(pin);
 		usuario.setRol(rol);
 		usuario.setFichajeManual("Activar".equals(fichajeManual) ? 1 : 0);    
 		usuario.setCreado(LocalDateTime.now());
 
-		usuarioRepositorio.save(usuario);
-		Notification.show("Usuario añadido: " + usuario.getNombre(), 2000, Notification.Position.TOP_CENTER);
+		try {
+	        usuarioRepositorio.save(usuario);
+	        Notification.show("Usuario añadido: " + usuario.getNombre(), 2000, Notification.Position.TOP_CENTER);
+	        return true;
+	    } catch (Exception e) {
+	        Notification.show("Usuario Login ya existente", 2000, Notification.Position.TOP_CENTER);
+	        return false;
+	    }
 	}
 	
-	private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, PasswordField  campo6, TextField campo7, TextField campo8, Select<String> campo9, Select<String> campo10, Select<String> campo11) {
+	/*private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, PasswordField  campo6, TextField campo7, TextField campo8, Select<String> campo9, Select<String> campo10, Select<String> campo11) {
 		campo1.setValue("");
 		campo2.setValue("");
 		campo3.setValue("");
@@ -303,7 +333,7 @@ public class AddUsuario extends AppLayout{
 		campo9.setValue(null);
 		campo10.setValue(null);
 		campo11.setValue(null);
-	}
+	}*/
 	
 	private Upload importar() {
 	    MemoryBuffer buffer = new MemoryBuffer();

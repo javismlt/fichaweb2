@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
@@ -29,14 +30,15 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Route("modusuario/:id") 
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class ModUsuario extends AppLayout implements BeforeEnterObserver {
-
     private final UsuarioRepositorio usuarioRepositorio;
     private final EmpresaRepositorio empresaRepositorio;
     private Usuario usuarioActual;
     private Usuario usuarioLogueado;
     private String nombreUsuario;
-
+    private Anchor botonUsuario;
+    
     public ModUsuario(UsuarioRepositorio usuarioRepositorio, EmpresaRepositorio empresaRepositorio) {
         this.usuarioRepositorio = usuarioRepositorio;
         this.empresaRepositorio = empresaRepositorio;
@@ -80,16 +82,17 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
     }
 
     private void crearHeader(String nombreUsuario) {
-        Button botonEmpresa = new Button("Añadir Empresa", e -> {
-            UI.getCurrent().navigate("addempresa");
-        });
-        botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
-
-        Button botonUsuario = new Button("Añadir Usuario", e -> {
-            UI.getCurrent().navigate("addusuario");
-        });
-        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
-
+    	Anchor botonEmpresa = new Anchor("empresa", "Añadir Empresa");
+        botonEmpresa.getElement().setAttribute("href", "/addempresa");
+        botonEmpresa.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
+        int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
+        
+        botonUsuario = new Anchor("usuario", "Añadir Usuario");
+        botonUsuario.getElement().setAttribute("href", "/addusuario");
+        botonUsuario.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
         enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
@@ -103,14 +106,39 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioLogueado.getRol() != 2) {
+        if (usuarioLogueado.getRol() == 1) {
             menuIzquierdo.add(botonEmpresa);
         }
         
         menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
 
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        if (usuarioActual.getRol() == 1) {
+        	menuResponsive.addItem("Añadir Empresa", e -> UI.getCurrent().navigate("addempresa"));
+        }
+        var itemAddUsuario = menuResponsive.addItem("Añadir Usuario", e -> UI.getCurrent().navigate("addusuario"));
+        menuResponsive.addItem("Empresas", e -> UI.getCurrent().navigate("listempresas"));
+        menuResponsive.addItem("Usuarios", e -> UI.getCurrent().navigate("listusuarios"));
+        menuResponsive.addItem("Registros", e -> UI.getCurrent().navigate("modregistros"));
+        
+        if (cantidadUsuarios >= maxEmpleados) {
+            botonUsuario.setVisible(false); 
+            itemAddUsuario.setEnabled(false);
+        } else {
+        	botonUsuario.setVisible(true); 
+        	itemAddUsuario.setEnabled(true);
+        }
+        
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
+        
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
 
@@ -125,7 +153,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -141,24 +169,24 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
             return;
         }
 
-        TextField campo1 = new TextField("Nombre");
+        TextField campo1 = new TextField("Nombre *");
         campo1.setValue(usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "");
 
         TextField campo2 = new TextField("Teléfono");
         campo2.setValue(usuarioActual.getTelefono() != null ? usuarioActual.getTelefono() : "");
         campo2.setMaxLength(9);
 
-        TextField campo3 = new TextField("Correo Electrónico");
+        TextField campo3 = new TextField("Correo Electrónico *");
         campo3.setValue(usuarioActual.getEmail() != null ? usuarioActual.getEmail() : "");
 
         TextField campo4 = new TextField("NIF");
         campo4.setValue(usuarioActual.getNif() != null ? usuarioActual.getNif() : "");
         campo4.setMaxLength(9);
 
-        TextField campo5 = new TextField("Usuario login");
+        TextField campo5 = new TextField("Usuario login *");
         campo5.setValue(usuarioActual.getLoginUsuario());
 
-        PasswordField campo6 = new PasswordField("Contraseña");
+        PasswordField campo6 = new PasswordField("Contraseña *");
 
         TextField campo7 = new TextField("Codigo Personal");
         campo7.setValue(usuarioActual.getCodPersonal() != null ? String.valueOf(usuarioActual.getCodPersonal()) : "");
@@ -168,21 +196,17 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         campo8.setMaxLength(4);
 
         Select<String> campo9 = new Select<>();
-        campo9.setLabel("Rol");
-        if (usuarioLogueado.getRol() == 2) {
-            campo9.setItems("Supervisor", "Trabajador", "Multiusuario");
-        } else {
-            campo9.setItems("Administrador", "Supervisor", "Trabajador", "Multiusuario");
-        }
+        campo9.setLabel("Rol *");
+        campo9.setItems("Trabajador");
         campo9.setValue(getRol(usuarioActual.getRol()));
 
         Select<String> campo10 = new Select<>();
-        campo10.setLabel("Fichaje Manual");
+        campo10.setLabel("Fichaje Manual *");
         campo10.setItems("Activar", "Desactivar");
         campo10.setValue(usuarioActual.getFichajeManual() == 1 ? "Activar" : "Desactivar");
 
         Select<String> campo11 = new Select<>();
-        campo11.setLabel("Empresa");
+        campo11.setLabel("Empresa *");
         campo11.setWidth("300px");
 
         if (usuarioLogueado.getRol() == 2) {
@@ -211,11 +235,14 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         }
         
         btnActualizar.addClickListener(e -> {
-            actualizarUsuario(usuarioActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), getRolNumerico(campo9.getValue()), campo10.getValue(), campo11.getValue());
-            Notification.show("Usuario actualizado: " + usuarioActual.getNombre(), 2000, Notification.Position.TOP_CENTER);
+        	boolean actualizado = actualizarUsuario(usuarioActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), getRolNumerico(campo9.getValue()), campo10.getValue(), campo11.getValue());
+        	if (actualizado) {
+	        	 UI.getCurrent().navigate("listusuarios");
+	        }
         });
         
-        if (usuarioActual.getRol() == 3) {
+        if (usuarioActual.getRol() == 2 || usuarioActual.getRol() == 3 || usuarioActual.getRol() == 5) {
+        	campo5.setReadOnly(true);
             VerticalLayout columnaIzquierda = new VerticalLayout(campo5);
             VerticalLayout columnaDerecha = new VerticalLayout(campo6);
             columnaIzquierda.setWidth("45%");
@@ -253,7 +280,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
     }
     
     
-    private void actualizarUsuario(int id, String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
+    private boolean actualizarUsuario(int id, String Nombre, String Telefono, String email, String nif, String usuarioLogin, String password, String codPersonal, String pin, int rol, String fichajeManual, String empresa) {
         Usuario usuario = usuarioRepositorio.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         if (Nombre != null) {
@@ -303,13 +330,17 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         }
 
         usuario.setActualizado(LocalDateTime.now());  
-        usuarioRepositorio.save(usuario);
-  
-        if(usuarioActual.getId() == usuarioLogueado.getId()) {
-        	 VaadinSession.getCurrent().setAttribute("username", usuarioLogin);
-        }
-
-        UI.getCurrent().navigate("listusuarios");
+        try {
+	        usuarioRepositorio.save(usuario);
+	        Notification.show("Usuario añadido: " + usuario.getNombre(), 2000, Notification.Position.TOP_CENTER);
+	        if(usuarioActual.getId() == usuarioLogueado.getId()) {
+	        	 VaadinSession.getCurrent().setAttribute("username", usuarioLogin);
+	        }
+	        return true;
+	    } catch (Exception e) {
+	        Notification.show("Usuario Login ya existente", 2000, Notification.Position.TOP_CENTER);
+	        return false;
+	    }
     }
 
     private String getRol(int rol) {

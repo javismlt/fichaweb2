@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
@@ -26,6 +27,7 @@ import servicios.EmpresaServicio;
 import org.springframework.transaction.annotation.Transactional;
 
 @Route("listempresas")
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class ListEmpresas extends AppLayout {
 
 	private final EmpresaServicio empresaServicio; 
@@ -57,16 +59,23 @@ public class ListEmpresas extends AppLayout {
     }
 
     private void crearHeader(String nombreUsuario) {
-        Button botonEmpresa = new Button("Añadir Empresa", e -> {
-            UI.getCurrent().navigate("addempresa");
-        });
-        botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
-
-        Button botonUsuario = new Button("Añadir Usuario", e -> {
-            UI.getCurrent().navigate("addusuario");
-        });
-        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
-
+    	Anchor botonEmpresa = new Anchor("empresa", "Añadir Empresa");
+        botonEmpresa.getElement().setAttribute("href", "/addempresa");
+        botonEmpresa.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
+        int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
+        
+        Anchor botonUsuario = new Anchor("usuario", "Añadir Usuario");
+        botonUsuario.getElement().setAttribute("href", "/addusuario");
+        botonUsuario.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        if (cantidadUsuarios >= maxEmpleados) {
+            botonUsuario.setVisible(false); 
+        } else {
+        	botonUsuario.setVisible(true); 
+        }
+        
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
         enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
@@ -80,13 +89,38 @@ public class ListEmpresas extends AppLayout {
         enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioActual.getRol() != 2) {
+        if (usuarioActual.getRol() == 1) {
             menuIzquierdo.add(botonEmpresa);
         }
         
         menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
+        
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        if (usuarioActual.getRol() == 1) {
+        	menuResponsive.addItem("Añadir Empresa", e -> UI.getCurrent().navigate("addempresa"));
+        }
+        var itemAddUsuario = menuResponsive.addItem("Añadir Usuario", e -> UI.getCurrent().navigate("addusuario"));
+        menuResponsive.addItem("Empresas", e -> UI.getCurrent().navigate("listempresas"));
+        menuResponsive.addItem("Usuarios", e -> UI.getCurrent().navigate("listusuarios"));
+        menuResponsive.addItem("Registros", e -> UI.getCurrent().navigate("modregistros"));
+        
+        if (cantidadUsuarios >= maxEmpleados) {
+            botonUsuario.setVisible(false); 
+            itemAddUsuario.setEnabled(false);
+        } else {
+        	botonUsuario.setVisible(true); 
+        	itemAddUsuario.setEnabled(true);
+        }
+        
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
 
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
@@ -102,7 +136,7 @@ public class ListEmpresas extends AppLayout {
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -191,6 +225,7 @@ public class ListEmpresas extends AppLayout {
         setContent(contenedorCentro);
     }
 
+    
     private void Confirmacion(Empresa empresa) {
         Dialog confirmacionDialogo = new Dialog();
         confirmacionDialogo.setCloseOnEsc(true);
@@ -231,6 +266,12 @@ public class ListEmpresas extends AppLayout {
         if (empresa.getActivo() == 1) {
         	empresa.setActivo(0);
             empresaRepositorio.save(empresa);
+            
+            List<Usuario> usuarios = usuarioRepositorio.findByEmpresaId(empresa.getId());
+            for (Usuario usuario : usuarios) {
+                usuario.setActivo(0);
+                usuarioRepositorio.save(usuario);
+            }
 
             boton.setText("Activar");
             boton.getStyle().set("background-color", "#bfbfbf").set("color", "white");
@@ -238,6 +279,12 @@ public class ListEmpresas extends AppLayout {
         } else {
         	empresa.setActivo(1);
         	empresaRepositorio.save(empresa);
+        	
+        	 List<Usuario> usuarios = usuarioRepositorio.findByEmpresaId(empresa.getId());
+             for (Usuario usuario : usuarios) {
+                 usuario.setActivo(1);
+                 usuarioRepositorio.save(usuario);
+             }
 
             boton.setText("Activo");
             boton.getStyle().set("background-color", "green").set("color", "white");
@@ -245,4 +292,3 @@ public class ListEmpresas extends AppLayout {
         }
     }
 }
-

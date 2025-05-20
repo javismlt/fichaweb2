@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
@@ -26,6 +27,7 @@ import com.vaadin.flow.component.select.Select;
 import java.time.LocalDateTime;
 
 @Route("addempresa")
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class AddEmpresa extends AppLayout{
 	private final UsuarioRepositorio usuarioRepositorio;
 	private final EmpresaRepositorio empresaRepositorio;
@@ -50,17 +52,14 @@ public class AddEmpresa extends AppLayout{
     }
 	
 	private void crearHeader(String nombreUsuario) {
-
-        Button botonEmpresa = new Button("Añadir Empresa", e -> {
-            UI.getCurrent().navigate("addempresa");
-        });
-        botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
-
-        Button botonUsuario = new Button("Añadir Usuario", e -> {
-            UI.getCurrent().navigate("addusuario");
-        });
-        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
-
+		Anchor botonEmpresa = new Anchor("empresa", "Añadir Empresa");
+        botonEmpresa.getElement().setAttribute("href", "/addempresa");
+        botonEmpresa.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        Anchor botonUsuario = new Anchor("usuario", "Añadir Usuario");
+        botonUsuario.getElement().setAttribute("href", "/addusuario");
+        botonUsuario.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
         enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
@@ -75,7 +74,24 @@ public class AddEmpresa extends AppLayout{
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout(botonEmpresa, botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
+        
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        if (usuarioActual.getRol() == 1) {
+        	menuResponsive.addItem("Añadir Empresa", e -> UI.getCurrent().navigate("addempresa"));
+        }
+        menuResponsive.addItem("Añadir Usuario", e -> UI.getCurrent().navigate("addusuario"));
+        menuResponsive.addItem("Empresas", e -> UI.getCurrent().navigate("listempresas"));
+        menuResponsive.addItem("Usuarios", e -> UI.getCurrent().navigate("listusuarios"));
+        menuResponsive.addItem("Registros", e -> UI.getCurrent().navigate("modregistros"));
+        
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
 
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
@@ -91,7 +107,7 @@ public class AddEmpresa extends AppLayout{
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -103,45 +119,47 @@ public class AddEmpresa extends AppLayout{
     }
 	
 	private void crearFormulario() {
-	   
 	    H2 titulo = new H2("Añadir Empresa");
 	    titulo.getStyle().set("text-align", "center");
 
-	    TextField campo1 = new TextField("Nombre Comercial");
-	    TextField campo2 = new TextField("Razón Social");
-	    TextField campo3 = new TextField("Dirección");
-	    TextField campo4 = new TextField("Codigo Postal");
-	    TextField campo5 = new TextField("País");
-	    TextField campo6 = new TextField("Provincia");
-	    TextField campo7 = new TextField("Población");
-	    TextField campo8 = new TextField("Teléfono");
-	    TextField campo9 = new TextField("Correo Electrónico");
-	    TextField campo10 = new TextField("Máximo Empleados");
-	    TextField campo11 = new TextField("Código GTSERP");
-	    TextField campo12 = new TextField("Grupo GTSERP");
-	    TextField campo13 = new TextField("Empresa GTSERP");
+	    TextField campo1 = new TextField("Nombre Comercial *");
+	    TextField campo2 = new TextField("Razón Social *");
+	    TextField campo3 = new TextField("Dirección *");
+	    TextField campo4 = new TextField("Codigo Postal *");
+	    TextField campo5 = new TextField("País *");
+	    TextField campo6 = new TextField("Provincia *");
+	    TextField campo7 = new TextField("Población *");
+	    TextField campo8 = new TextField("Teléfono *");
+	    TextField campo9 = new TextField("Correo Electrónico *");
+	    TextField campo10 = new TextField("Máximo Empleados *");
+	    TextField campo11 = new TextField("Código GTSERP *");
+	    TextField campo12 = new TextField("Grupo GTSERP *");
+	    TextField campo13 = new TextField("Empresa GTSERP *");
 
 	    Select<String> campo14 = new Select<>();
-	    campo14.setLabel("Multiusuario");
+	    campo14.setLabel("Multiusuario *");
 	    campo14.setItems("Activar", "Desactivar");
 	    
-	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13, campo14).forEach(tf -> tf.setWidth("300px"));
+	    Select<String> campo15 = new Select<>();
+	    campo15.setLabel("Inspector *");
+	    campo15.setItems("Activar", "Desactivar");
+	    
+	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13, campo14, campo15).forEach(tf -> tf.setWidth("300px"));
 
 	    Button btnGuardar = new Button("Guardar");
 	    btnGuardar.setWidth("100px");
 	    btnGuardar.setHeight("40px");
-	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("text-align", "center");
+	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("text-align", "center").set("margin-top", "35px").set("margin-left", "100px");
 
 	    btnGuardar.addClickListener(e -> {
-	        boolean guardado = registrarEmpresa(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue());
-
+	        boolean guardado = registrarEmpresa(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue(), campo15.getValue());
 	        if (guardado) {
-	            limpiarFormulario(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13, campo14);
+	        	UI.getCurrent().navigate("listempresas");
 	        }
 	    });
 	    
-	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7);
-	    VerticalLayout columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, campo14);
+	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8);
+	    VerticalLayout columnaDerecha = new VerticalLayout(campo9, campo10, campo11, campo12, campo13, campo14, campo15, btnGuardar);
 	    
 	    columnaIzquierda.setWidth("45%");
 	    columnaDerecha.setWidth("45%");
@@ -150,7 +168,7 @@ public class AddEmpresa extends AppLayout{
 	    columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 	    columnasLayout.setAlignItems(Alignment.START);
 
-	    VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout, btnGuardar);
+	    VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout);
 	    layoutFormulario.setAlignItems(Alignment.CENTER);
 	    layoutFormulario.setWidthFull();
 	    layoutFormulario.getStyle().set("padding", "20px");
@@ -159,7 +177,7 @@ public class AddEmpresa extends AppLayout{
 	}
 	
 	
-	private boolean registrarEmpresa(String nombreComercial, String razonSocial, String direccion, String codPostal, String pais, String provincia, String poblacion, String telefono, String email, String empleados,String codGtserp, String grupoGtserp, String empresaGtserp, String multiusuario) {
+	private boolean registrarEmpresa(String nombreComercial, String razonSocial, String direccion, String codPostal, String pais, String provincia, String poblacion, String telefono, String email, String empleados,String codGtserp, String grupoGtserp, String empresaGtserp, String multiusuario, String inspector) {
 	    int codigo_gtserp = Integer.parseInt(codGtserp);
 	    int grupo_gtserp = Integer.parseInt(grupoGtserp);
 	    int empresa_gtserp = Integer.parseInt(empresaGtserp);
@@ -184,6 +202,7 @@ public class AddEmpresa extends AppLayout{
 	    empresa.setCodGtserp(codigo_gtserp);  
 	    empresa.setGrupoGtserp(grupo_gtserp);  
 	    empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);  
+	    empresa.setInspector("Activar".equals(inspector) ? 1 : 0);  
 	    
 	    empresaRepositorio.save(empresa);
 	    Notification.show("Empresa añadida: " + empresa.getNombreComercial(), 2000, Notification.Position.TOP_CENTER);
@@ -192,10 +211,16 @@ public class AddEmpresa extends AppLayout{
 	        registrarUsuarioMultiusuario(empresa);
 	    }
 	    
+	    if ("Activar".equals(inspector)) {
+	        registrarUsuarioInspector(empresa);
+	    }
+	    
+	    registrarUsuarioSupervisor(empresa);
+	    
 	    return true;
 	}
 	
-	private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, TextField campo6, TextField campo7, TextField campo8, TextField campo9, TextField campo10, TextField campo11, TextField campo12, TextField campo13, Select<String> campo14) {
+	/*private void limpiarFormulario(TextField campo1, TextField campo2, TextField campo3, TextField campo4, TextField campo5, TextField campo6, TextField campo7, TextField campo8, TextField campo9, TextField campo10, TextField campo11, TextField campo12, TextField campo13, Select<String> campo14, Select<String> campo15) {
 		campo1.setValue("");
 		campo2.setValue("");
 		campo3.setValue("");
@@ -210,10 +235,30 @@ public class AddEmpresa extends AppLayout{
 		campo12.setValue("");
 		campo13.setValue("");
 		campo14.setValue(null);
+		campo15.setValue(null);
+	}*/
+	
+	private void registrarUsuarioSupervisor(Empresa empresa) {
+	    Usuario usuario = new Usuario();
+	    usuario.setEmail("0");
+	    usuario.setNombre("Supervisor_" + empresa.getNombreComercial());
+	    usuario.setLoginUsuario("Supervisor_" + empresa.getId());
+	    
+	    String aleatoriaPassword = generarContraseña();
+	    BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+	    String passwordEncriptada = passwordEncoder.encode(aleatoriaPassword);
+	    usuario.setPassword(passwordEncriptada);
+	    
+	    usuario.setEmpresa(empresa);
+	    usuario.setRol(2);
+	    usuario.setCreado(LocalDateTime.now());
+
+	    usuarioRepositorio.save(usuario);
 	}
 
 	private void registrarUsuarioMultiusuario(Empresa empresa) {
 	    Usuario usuario = new Usuario();
+	    usuario.setEmail("0");
 	    usuario.setNombre("Multiusuario_" + empresa.getNombreComercial());
 	    usuario.setLoginUsuario("Multi_" + empresa.getId());
 	    
@@ -224,6 +269,24 @@ public class AddEmpresa extends AppLayout{
 	    
 	    usuario.setEmpresa(empresa);
 	    usuario.setRol(3);
+	    usuario.setCreado(LocalDateTime.now());
+
+	    usuarioRepositorio.save(usuario);
+	}
+	
+	private void registrarUsuarioInspector(Empresa empresa) {
+	    Usuario usuario = new Usuario();
+	    usuario.setEmail("0");
+	    usuario.setNombre("Inspector_" + empresa.getNombreComercial());
+	    usuario.setLoginUsuario("Inspector_" + empresa.getId());
+	    
+	    String aleatoriaPassword = generarContraseña();
+	    BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+	    String passwordEncriptada = passwordEncoder.encode(aleatoriaPassword);
+	    usuario.setPassword(passwordEncriptada);
+	    
+	    usuario.setEmpresa(empresa);
+	    usuario.setRol(5);
 	    usuario.setCreado(LocalDateTime.now());
 
 	    usuarioRepositorio.save(usuario);

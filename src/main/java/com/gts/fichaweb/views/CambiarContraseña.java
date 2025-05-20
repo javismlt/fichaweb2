@@ -25,7 +25,6 @@ import java.time.LocalDateTime;
 
 @Route("cambiarpasswd")
 public class CambiarContraseña extends AppLayout implements BeforeEnterObserver {
-
     private final PasswordTokenRepositorio passwordTokenRepo;
     private final UsuarioRepositorio usuarioRepositorio;
     private Usuario usuarioActual;
@@ -66,7 +65,6 @@ public class CambiarContraseña extends AppLayout implements BeforeEnterObserver
         }
 
         this.usuarioActual = usuario;
-
         crearFormulario();
     }
 
@@ -121,6 +119,4 @@ public class CambiarContraseña extends AppLayout implements BeforeEnterObserver
         layout.add(headerLayout, nuevaPassword, confirmarPassword, btnconfirmar);
         setContent(layout);
     }
-
 }
-

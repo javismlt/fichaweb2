@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
@@ -32,14 +33,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.util.Optional;
 
 @Route("modempresa/:id") 
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
-
     private final EmpresaRepositorio empresaRepositorio;
     private Empresa empresaActual;
     private final UsuarioRepositorio usuarioRepositorio;
     private Usuario usuarioActual;
     private Usuario usuarioLogueado;
-
+    private Anchor botonUsuario;
+    
     public ModEmpresa(EmpresaRepositorio empresaRepositorio, UsuarioRepositorio usuarioRepositorio) {
         this.empresaRepositorio = empresaRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
@@ -91,16 +93,17 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
     }
 
     private void crearHeader(String nombreUsuario) {
-        Button botonEmpresa = new Button("Añadir Empresa", e -> {
-            UI.getCurrent().navigate("addempresa");
-        });
-        botonEmpresa.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px");
-
-        Button botonUsuario = new Button("Añadir Usuario", e -> {
-            UI.getCurrent().navigate("addusuario");
-        });
-        botonUsuario.getStyle().set("color", "white").set("background-color", "#007BFF").set("font-size", "16px").set("border", "1px solid black").set("cursor", "pointer").set("padding", "8px 16px").set("border-radius", "4px");
-
+    	Anchor botonEmpresa = new Anchor("empresa", "Añadir Empresa");
+        botonEmpresa.getElement().setAttribute("href", "/addempresa");
+        botonEmpresa.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
+        int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
+        int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
+        
+        botonUsuario = new Anchor("usuario", "Añadir Usuario");
+        botonUsuario.getElement().setAttribute("href", "/addusuario");
+        botonUsuario.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+        
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
         enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
@@ -114,13 +117,38 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioLogueado.getRol() != 2) {
+        if (usuarioLogueado.getRol() == 1) {
             menuIzquierdo.add(botonEmpresa);
         }
         
         menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
+        
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        if (usuarioActual.getRol() == 1) {
+        	menuResponsive.addItem("Añadir Empresa", e -> UI.getCurrent().navigate("addempresa"));
+        }
+        var itemAddUsuario = menuResponsive.addItem("Añadir Usuario", e -> UI.getCurrent().navigate("addusuario"));
+        menuResponsive.addItem("Empresas", e -> UI.getCurrent().navigate("listempresas"));
+        menuResponsive.addItem("Usuarios", e -> UI.getCurrent().navigate("listusuarios"));
+        menuResponsive.addItem("Registros", e -> UI.getCurrent().navigate("modregistros"));
+        
+        if (cantidadUsuarios >= maxEmpleados) {
+            botonUsuario.setVisible(false); 
+            itemAddUsuario.setEnabled(false);
+        } else {
+        	botonUsuario.setVisible(true); 
+        	itemAddUsuario.setEnabled(true);
+        }
+        
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
 
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
@@ -136,7 +164,7 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -190,36 +218,33 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         campo14.setLabel("Multiusuario");
         campo14.setItems("Activar", "Desactivar");
         campo14.setValue(empresaActual.getMultiusuario() == 1 ? "Activar" : "Desactivar");
+        
+        Select<String> campo15 = new Select<>();
+        campo15.setLabel("Inspector");
+        campo15.setItems("Activar", "Desactivar");
+        campo15.setValue(empresaActual.getInspector() == 1 ? "Activar" : "Desactivar");
 
-        Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9)
+        Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo14, campo15)
             .forEach(tf -> tf.setWidth("300px"));
 
         if (usuarioLogueado.getRol() == 1) {
-            Stream.of(campo10, campo11, campo12, campo13, campo14).forEach(tf -> tf.setWidth("300px"));
+            Stream.of(campo10, campo11, campo12, campo13).forEach(tf -> tf.setWidth("300px"));
         }
 
         Button btnActualizar = new Button("Actualizar");
         btnActualizar.setWidth("100px");
         btnActualizar.setHeight("40px");
-        if (usuarioLogueado.getRol() == 1) {
-        	btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
-        } else {
-        	btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
-        }
+        btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
         
         btnActualizar.addClickListener(e -> {
             if (usuarioLogueado.getRol() == 1) {
-                actualizarEmpresa(
-                    empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),
-                    campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(),
-                    campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue()
-                );
+                actualizarEmpresa(empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue(), campo15.getValue());
             } else {
-                actualizarEmpresa(
-                    empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),
-                    campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(),
-                    null, null, null, null, null
-                );
+            	String maxEmpleados = String.valueOf(empresaActual.getMaxEmpleados());
+            	String codGtserp = String.valueOf(empresaActual.getCodGtserp());
+            	String grupoGtserp = String.valueOf(empresaActual.getGrupoGtserp());
+            	String empresaGtserp = String.valueOf(empresaActual.getEmpresaGtserp());
+                actualizarEmpresa(empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), maxEmpleados, codGtserp, grupoGtserp, empresaGtserp, campo14.getValue(), campo15.getValue());
             }
         });
 
@@ -228,16 +253,16 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         VerticalLayout layoutFormulario = new VerticalLayout();
 
         if (usuarioLogueado.getRol() == 1) {
-            columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7);
-            columnaDerecha = new VerticalLayout(campo8, campo9, campo10, campo11, campo12, campo13, campo14);
+            columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8);
+            columnaDerecha = new VerticalLayout(campo9, campo10, campo11, campo12, campo13, campo14, campo15, btnActualizar);
             HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
             columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
             columnasLayout.setAlignItems(Alignment.START);
 
-            layoutFormulario.add(new H2("Modificar Empresa"), columnasLayout, btnActualizar);
+            layoutFormulario.add(new H2("Modificar Empresa"), columnasLayout);
         } else {
-            columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5);
-            columnaDerecha = new VerticalLayout(campo6, campo7, campo8, campo9);
+            columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
+            columnaDerecha = new VerticalLayout(campo7, campo8, campo9, campo14, campo15);
 
             HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
             columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
@@ -257,7 +282,7 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         setContent(layoutFormulario);
     }
 
-    private void actualizarEmpresa(int id, String nombreComercial, String razonSocial, String direccion, String codigoPostal, String pais, String provincia, String poblacion, String telefono, String correoElectronico, String maxEmpleados, String codigoGTSERP, String grupoGTSERP, String empresaGTSERP, String multiusuario) {
+    private void actualizarEmpresa(int id, String nombreComercial, String razonSocial, String direccion, String codigoPostal, String pais, String provincia, String poblacion, String telefono, String correoElectronico, String maxEmpleados, String codigoGTSERP, String grupoGTSERP, String empresaGTSERP, String multiusuario, String inspector) {
         int codigo_gtserp = Integer.parseInt(codigoGTSERP);
         int grupo_gtserp = Integer.parseInt(grupoGTSERP);
         int empresa_gtserp = Integer.parseInt(empresaGTSERP);
@@ -287,6 +312,7 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         empresa.setGrupoGtserp(grupo_gtserp);
         empresa.setEmpresaGtserp(empresa_gtserp);
         empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);
+        empresa.setInspector("Activar".equals(inspector) ? 1 : 0);
 
         if (empresa.getMultiusuario() == 0) {
             Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol_Id(empresa.getId(), 3);
@@ -306,6 +332,24 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
             }
         }
         
+        if (empresa.getInspector() == 0) {
+            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol_Id(empresa.getId(), 5);
+            usuarios.ifPresent(usuario -> {
+                usuario.setActivo(0);
+                usuarioRepositorio.save(usuario);
+            });
+        } else {
+            Optional<Usuario> usuarios = usuarioRepositorio.findByEmpresa_IdAndRol_Id(empresa.getId(), 5);
+            if (!usuarios.isPresent()) {
+                registrarUsuarioInspector(empresa);
+            } else {
+                usuarios.ifPresent(usuario -> {
+                    usuario.setActivo(1);
+                    usuarioRepositorio.save(usuario);
+                });
+            }
+        }
+        
         empresaRepositorio.save(empresa);
         Notification.show("Empresa actualizada: " + empresa.getNombreComercial(), 2000, Notification.Position.TOP_CENTER);
         UI.getCurrent().navigate("listempresas");
@@ -313,6 +357,7 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
     
     private void registrarUsuarioMultiusuario(Empresa empresa) {
 	    Usuario usuario = new Usuario();
+	    usuario.setEmail("0");
 	    usuario.setNombre("Multiusuario_" + empresa.getNombreComercial());
 	    usuario.setLoginUsuario("Multi_" + empresa.getId());
 	    
@@ -323,6 +368,24 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
 	    
 	    usuario.setEmpresa(empresa);
 	    usuario.setRol(3);
+	    usuario.setCreado(LocalDateTime.now());
+
+	    usuarioRepositorio.save(usuario);
+	}
+    
+    private void registrarUsuarioInspector(Empresa empresa) {
+	    Usuario usuario = new Usuario();
+	    usuario.setEmail("0");
+	    usuario.setNombre("Inspector_" + empresa.getNombreComercial());
+	    usuario.setLoginUsuario("Inspector_" + empresa.getId());
+	    
+	    String aleatoriaPassword = generarContraseña();
+	    BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+	    String passwordEncriptada = passwordEncoder.encode(aleatoriaPassword);
+	    usuario.setPassword(passwordEncriptada);
+	    
+	    usuario.setEmpresa(empresa);
+	    usuario.setRol(5);
 	    usuario.setCreado(LocalDateTime.now());
 
 	    usuarioRepositorio.save(usuario);

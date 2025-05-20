@@ -49,6 +49,9 @@ public class Empresa {
     @Column(name = "multiusuario", nullable = false)
     private Integer multiusuario = 0;
     
+    @Column(name = "inspector", nullable = false)
+    private Integer inspector = 0;
+    
     @Column(name = "activo", nullable = false)
     private Integer activo = 1;
     
@@ -166,6 +169,14 @@ public class Empresa {
 
     public void setMultiusuario(Integer multiusuario) {
         this.multiusuario = multiusuario;
+    }
+    
+    public Integer getInspector() {
+        return inspector;
+    }
+
+    public void setInspector(Integer inspector) {
+        this.inspector = inspector;
     }
 
     public Integer getActivo() {

@@ -3,6 +3,7 @@ package com.gts.fichaweb.views;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -27,13 +28,13 @@ import java.util.stream.Collectors;
 import java.time.format.DateTimeFormatter;
 
 @Route("registro")
+@CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class RegistroVista extends AppLayout {
     private final UsuarioRepositorio usuarioRepositorio;
     private final RegistroRepositorio registroRepositorio;
     private Usuario usuarioActual;
     private Usuario usuarioAnterior;
     private Usuario usuarioActualAux;
-
     private Button boton1;
     private Button boton2;
     private Button boton3;
@@ -64,7 +65,19 @@ public class RegistroVista extends AppLayout {
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout(registro, consulta);
         menuIzquierdo.setSpacing(true);
+        menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
+        
+        Button menuDesplegable = new Button("☰"); 
+        menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
+
+        ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
+        menuResponsive.setOpenOnClick(true);
+        menuResponsive.addItem("Registro", e -> UI.getCurrent().navigate("registro"));
+        menuResponsive.addItem("Consulta", e -> UI.getCurrent().navigate("consulta"));
+
+        menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
+        menuDesplegable.getElement().getClassList().add("menu-desplegable");
 
         Button menuDerecho = new Button(nombreUsuario);
         menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
@@ -80,7 +93,7 @@ public class RegistroVista extends AppLayout {
             });
         });
 
-        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDerecho);
+        HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
         header.setAlignItems(Alignment.CENTER);
@@ -124,9 +137,9 @@ public class RegistroVista extends AppLayout {
             aplicarEstiloBoton(boton5, false);
         } else {
             Usuario usuarioParaEvaluar = (usuarioActualAux != null) ? usuarioActualAux : usuarioActual;
-            Registro ultimoRegistro = registroRepositorio.findTopByUsuarioOrderByIdDesc(usuarioParaEvaluar);
+            Registro ultimoRegistro = registroRepositorio.findTopByUsuarioOrderByFechaRegistroDescHoraDesc(usuarioParaEvaluar);
             String accionUltimoRegistro = ultimoRegistro != null ? ultimoRegistro.getAccion() : null;
-
+            System.out.println("Acción del último registro: " + accionUltimoRegistro);
             if ("SALIDA".equals(accionUltimoRegistro)) {
                 aplicarEstiloBoton(boton1, true);   
                 aplicarEstiloBoton(boton2, false);  
@@ -196,10 +209,10 @@ public class RegistroVista extends AppLayout {
             Select<Usuario> selectUsuarios = new Select<>();
 
             List<Usuario> usuariosDeLaEmpresa = usuarioRepositorio.findByEmpresaId(usuarioActual.getEmpresa().getId());
-            usuariosDeLaEmpresa = usuariosDeLaEmpresa.stream().filter(usuario -> usuario.getRol() != 3 && usuario.getActivo() != 0).collect(Collectors.toList());
+            usuariosDeLaEmpresa = usuariosDeLaEmpresa.stream().filter(usuario -> usuario.getRol() == 4 && usuario.getActivo() == 1).collect(Collectors.toList());
 
             selectUsuarios.setItems(usuariosDeLaEmpresa);
-            selectUsuarios.setItemLabelGenerator(Usuario::getNombre);  
+            selectUsuarios.setItemLabelGenerator(Usuario::getLoginUsuario);  
             selectUsuarios.setPlaceholder("Usuarios");
             
             Dialog pinDialog = new Dialog();
@@ -285,7 +298,6 @@ public class RegistroVista extends AppLayout {
             selectUsuarios.addValueChangeListener(event -> {
                 Usuario usuarioSeleccionado = event.getValue();
                 if (usuarioSeleccionado != null) {
-                    System.out.println("Usuario seleccionado: " + usuarioSeleccionado.getNombre());
                     pinField.setValue(""); 
                     pinDialog.open();
                 }

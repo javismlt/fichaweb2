@@ -1,4 +1,17 @@
-@media (max-width: 765px) {
+.menu-izquierdo {
+    display: flex;
+    gap: 25px;
+}
+
+.menu-desplegable {
+    display: none;
+    font-size: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+@media (max-width: 767px) {
     .fechas-layout {
         display: flex;
         flex-direction: column;
@@ -45,4 +58,16 @@
         width: 120px !important;
         flex-grow: 0 !important;
     }
+	
+	.menu-izquierdo {
+	    display: none !important;
+	}
+
+	.menu-desplegable {
+	    display: inline-block !important;
+	}
+	
+	.header-responsive {
+	    justify-content: space-between !important;
+	}
 }

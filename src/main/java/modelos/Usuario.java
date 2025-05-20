@@ -5,7 +5,7 @@ import java.time.*;
 import modelos.Roles; 
 
 @Entity
-@Table(name = "USUARIOS")
+@Table(name = "USUARIOS", uniqueConstraints = {@UniqueConstraint(columnNames = "login_usuario")})
 public class Usuario {
 
 	@Id
@@ -18,13 +18,13 @@ public class Usuario {
 	@Column(name = "telefono", length = 15)
     private String telefono;
 	
-	@Column(name = "email", length = 255)
+	@Column(name = "email", nullable = false, length = 255)
     private String email;
 	
 	@Column(name = "nif", length = 30)
     private String nif;
 	
-	@Column(name = "login_usuario", nullable = false, length = 15)
+	@Column(name = "login_usuario", nullable = false, length = 20, unique = true)
     private String loginUsuario;
 	
 	@Column(name = "password", nullable = false, length = 255)
@@ -33,9 +33,6 @@ public class Usuario {
 	@ManyToOne
 	@JoinColumn(name = "empresa_id", referencedColumnName = "id", nullable = false)
 	private Empresa empresa;  
-	
-	//@Column(name = "rol", nullable = false)
-    //private Integer rol;
 	
 	@ManyToOne
     @JoinColumn(name = "rol", referencedColumnName = "id", nullable = false)

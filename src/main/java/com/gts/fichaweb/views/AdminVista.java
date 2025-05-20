@@ -83,6 +83,12 @@ public class AdminVista extends VerticalLayout{
                 UI.getCurrent().access(() -> {
                     UI.getCurrent().navigate("listusuarios");
                 });
+        	} else if(usuario.getRol() == 5){
+        		VaadinSession.getCurrent().setAttribute("username", usuario.getLoginUsuario());
+        		Notification.show("Bienvenido, " + usuario.getNombre(), 2000, Notification.Position.TOP_CENTER);
+                UI.getCurrent().access(() -> {
+                    UI.getCurrent().navigate("inspector");
+                });
         	} else {
         		Notification.show("Usuario no administrador", 2000, Notification.Position.TOP_CENTER);
         	}
