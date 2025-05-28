@@ -6,13 +6,18 @@ import com.vaadin.flow.component.contextmenu.ContextMenu;
 import java.time.format.DateTimeFormatter;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.component.applayout.AppLayout;
 import modelos.Usuario;
 import modelos.Registro;
+import modelos.Solicitudes;
 import repositorios.RegistroRepositorio;
 import repositorios.UsuarioRepositorio;
+import servicios.EmailNotificacion;
+
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
@@ -20,6 +25,13 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import java.time.LocalDate;
 import com.vaadin.flow.component.grid.Grid;
 import java.util.List;
+import java.util.Optional;
+import modelos.Notificaciones;
+import modelos.Solicitudes;
+import modelos.Permisos;
+import repositorios.NotificacionesRepositorio;
+import repositorios.SolicitudesRepositorio;
+import repositorios.PermisosRepositorio;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Cell;
@@ -44,6 +56,8 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import java.util.Comparator;
 import com.vaadin.flow.component.dependency.CssImport;
 import modelos.Logs_modificaciones;
+import modelos.Notificaciones;
+import modelos.Permisos;
 import repositorios.Logs_modificacionesRepositorio;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,11 +74,20 @@ public class ModRegistro extends AppLayout {
     private Span totalHorasTrabajadasLabel;
     private DatePicker fechaInicio;
     private DatePicker fechaFin;
+    private VerticalLayout contenidoPrincipal;
+    private final NotificacionesRepositorio notificacionesRepositorio; 
+    private final PermisosRepositorio permisosRepositorio; 
+    private final SolicitudesRepositorio solicitudesRepositorio; 
+    private final EmailNotificacion emailNotificacion;
 
-    public ModRegistro(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, Logs_modificacionesRepositorio logs_modificacionesRepositorio) {
+    public ModRegistro(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, Logs_modificacionesRepositorio logs_modificacionesRepositorio, NotificacionesRepositorio notificacionesRepositorio, PermisosRepositorio permisosRepositorio, SolicitudesRepositorio solicitudesRepositorio, EmailNotificacion emailNotificacion) {
         this.registroRepositorio = registroRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
         this.logs_modificacionesRepositorio = logs_modificacionesRepositorio; 
+        this.notificacionesRepositorio = notificacionesRepositorio;
+        this.permisosRepositorio = permisosRepositorio;
+        this.solicitudesRepositorio = solicitudesRepositorio;
+        this.emailNotificacion = emailNotificacion;
         
         String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
         if (nombreUsuario == null) {
@@ -83,17 +106,6 @@ public class ModRegistro extends AppLayout {
     }
 
     private void crearHeader(String nombreUsuario) {
-        Anchor botonEmpresa = new Anchor("empresa", "Añadir Empresa");
-        botonEmpresa.getElement().setAttribute("href", "/addempresa");
-        botonEmpresa.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
-        
-        int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
-        int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();
-        
-        Anchor botonUsuario = new Anchor("usuario", "Añadir Usuario");
-        botonUsuario.getElement().setAttribute("href", "/addusuario");
-        botonUsuario.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
-
         Anchor enlaceEmpresas = new Anchor("usuario", "Empresas");
         enlaceEmpresas.getElement().setAttribute("href", "/listempresas");
         enlaceEmpresas.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
@@ -107,44 +119,61 @@ public class ModRegistro extends AppLayout {
         enlaceRegistros.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
         HorizontalLayout menuIzquierdo = new HorizontalLayout();
-        if (usuarioActual.getRol() == 1) {
-            menuIzquierdo.add(botonEmpresa);
-        }
-        
-        menuIzquierdo.add(botonUsuario, enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
+        menuIzquierdo.add(enlaceEmpresas, enlaceUsuarios, enlaceRegistros);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
-        
+
         Button menuDesplegable = new Button("☰"); 
         menuDesplegable.getStyle().set("font-size", "24px").set("background", "none").set("border", "1px solid black").set("cursor", "pointer").set("border-radius", "4px").set("display", "none");
 
         ContextMenu menuResponsive = new ContextMenu(menuDesplegable);
         menuResponsive.setOpenOnClick(true);
-        if (usuarioActual.getRol() == 1) {
-        	menuResponsive.addItem("Añadir Empresa", e -> UI.getCurrent().navigate("addempresa"));
-        }
-        var itemAddUsuario = menuResponsive.addItem("Añadir Usuario", e -> UI.getCurrent().navigate("addusuario"));
         menuResponsive.addItem("Empresas", e -> UI.getCurrent().navigate("listempresas"));
         menuResponsive.addItem("Usuarios", e -> UI.getCurrent().navigate("listusuarios"));
         menuResponsive.addItem("Registros", e -> UI.getCurrent().navigate("modregistros"));
         
-        if (cantidadUsuarios >= maxEmpleados) {
-            botonUsuario.setVisible(false); 
-            itemAddUsuario.setEnabled(false);
-        } else {
-        	botonUsuario.setVisible(true); 
-        	itemAddUsuario.setEnabled(true);
-        }
-        
         menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
         menuDesplegable.getElement().getClassList().add("menu-desplegable");
+        
+        int notificacionesPendientes = notificacionesRepositorio.countByEstado(0);
+        Image correoImagen = new Image("img/correo.png", "Correo Icono");
+        correoImagen.setWidth("35px");
+        correoImagen.setHeight("35px");
+        correoImagen.getStyle().set("margin-top", "8px");
+        
+        Button btnNotificaciones = new Button(correoImagen);
+        btnNotificaciones.addClickListener(e -> mostrarDialogoNotificaciones());
 
-        Button menuDerecho = new Button(nombreUsuario);
-        menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
+        btnNotificaciones.getStyle().set("font-size", "20px").set("background", "transparent").set("border", "none").set("cursor", "pointer").set("position", "relative");
 
-        ContextMenu contextMenu = new ContextMenu(menuDerecho);
+        Div notificacionesWrapper = new Div();
+        notificacionesWrapper.getStyle().set("position", "relative").set("display", "inline-block");
+        notificacionesWrapper.getElement().getClassList().add("btn-notificaciones");
+        notificacionesWrapper.add(btnNotificaciones);
+
+        if (notificacionesPendientes > 0) {
+            Span badge = new Span(String.valueOf(notificacionesPendientes));
+            badge.getStyle().set("background-color", "red").set("color", "white").set("border-radius", "50%").set("width", "18px").set("height", "18px").set("font-size", "14px").set("position", "absolute").set("top", "-5px").set("right", "-5px").set("display", "flex").set("align-items", "center").set("justify-content", "center");
+            notificacionesWrapper.add(badge);
+        }
+        
+        Button menuUser = new Button(nombreUsuario);
+        menuUser.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
+
+        Div menuUserWrapper = new Div();
+        menuUserWrapper.getStyle().set("position", "relative").set("display", "inline-block");
+        menuUserWrapper.add(menuUser);
+
+        if (notificacionesPendientes > 0) {
+            Span mobileBadge = new Span(String.valueOf(notificacionesPendientes));
+            mobileBadge.addClassName("mobile-badge");
+            mobileBadge.getStyle().set("background-color", "red").set("color", "white").set("border-radius", "50%").set("width", "16px").set("height", "16px").set("font-size", "12px").set("position", "absolute").set("top", "-5px").set("right", "-5px").set("display", "flex").set("align-items", "center").set("justify-content", "center");
+            menuUserWrapper.add(mobileBadge);
+        }
+        ContextMenu contextMenu = new ContextMenu(menuUser);
         contextMenu.setOpenOnClick(true);
+        contextMenu.addItem("Notificaciones (" + notificacionesPendientes + ")", e -> mostrarDialogoNotificaciones());
         contextMenu.addItem("Cerrar sesión", e -> {
             UI.getCurrent().access(() -> {
                 VaadinSession.getCurrent().close();
@@ -154,6 +183,12 @@ public class ModRegistro extends AppLayout {
             });
         });
 
+        HorizontalLayout menuDerecho = new HorizontalLayout();
+        menuDerecho.add(notificacionesWrapper, menuUserWrapper);
+        menuDerecho.setSpacing(true);
+        menuDerecho.getStyle().set("gap", "25px");
+        menuDerecho.setAlignItems(Alignment.CENTER);
+        
         HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
@@ -162,7 +197,7 @@ public class ModRegistro extends AppLayout {
         header.getStyle().set("padding-top", "10px").set("padding-bottom", "10px").set("padding-left", "100px").set("padding-right", "100px").set("background-color", "#f8f9fa").set("box-shadow", "0 2px 4px rgba(0, 0, 0, 0.1)");
 
         addToNavbar(header);
-    }	
+    }
 
     private void crearContenido() {
         fechaInicio = new DatePicker("Fecha inicio");
@@ -242,6 +277,13 @@ public class ModRegistro extends AppLayout {
             if (usuarioSeleccionado != null) {
                 usuarioActualAux = usuarioSeleccionado;
                 usuarioColumn.setVisible(usuarioActualAux.getId() == -1);
+                if (usuarioActualAux.getId() != -1) {
+                    if (contenidoPrincipal.getChildren().noneMatch(c -> c.equals(totalHorasTrabajadasLabel))) {
+                        contenidoPrincipal.addComponentAtIndex(1, totalHorasTrabajadasLabel);
+                    }
+                } else {
+                    contenidoPrincipal.remove(totalHorasTrabajadasLabel);
+                }
                 actualizarGrid(fechaInicio.getValue(), fechaFin.getValue(), selectValidado.getValue());
             }
         });
@@ -341,10 +383,6 @@ public class ModRegistro extends AppLayout {
         fechaInicio.addValueChangeListener(event -> actualizarGrid(fechaInicio.getValue(), fechaFin.getValue(), selectValidado.getValue()));
         fechaFin.addValueChangeListener(event -> actualizarGrid(fechaInicio.getValue(), fechaFin.getValue(), selectValidado.getValue()));
         
-        totalHorasTrabajadasLabel = new Span("");
-        totalHorasTrabajadasLabel.getStyle().set("font-weight", "bold").set("font-size", "16px");
-        totalHorasTrabajadasLabel.addClassName("horas-trabajadas-label");
-        
         Button descargarPdf = new Button("Descargar PDF", e -> generarPdf(grid));
         Button descargarExcel = new Button("Descargar EXCEL", e -> generarExcel(grid));
 
@@ -358,7 +396,12 @@ public class ModRegistro extends AppLayout {
 
         fechasLayout.add(botonesLayout);
 
-        VerticalLayout contenidoPrincipal = new VerticalLayout(fechasLayout, totalHorasTrabajadasLabel, grid); 
+        totalHorasTrabajadasLabel = new Span("");
+        totalHorasTrabajadasLabel.getStyle().set("font-weight", "bold").set("font-size", "16px");
+        totalHorasTrabajadasLabel.addClassName("horas-trabajadas-label");
+
+        contenidoPrincipal = new VerticalLayout(fechasLayout, grid);
+        this.contenidoPrincipal = contenidoPrincipal;
         contenidoPrincipal.setPadding(true);
         contenidoPrincipal.setAlignItems(Alignment.START);
         contenidoPrincipal.setWidthFull();
@@ -421,6 +464,7 @@ public class ModRegistro extends AppLayout {
         
         String horasTrabajadas = calcularHorasTrabajadas(registros);
         totalHorasTrabajadasLabel.setText("TRABAJADO: " + horasTrabajadas + " horas");
+        
     }
     
     private String calcularHorasTrabajadas(List<Registro> registros) {
@@ -433,42 +477,61 @@ public class ModRegistro extends AppLayout {
         Duration totalTrabajado = Duration.ZERO;
         Duration totalDescanso = Duration.ZERO;
 
-        LocalTime inicioIntervalo = null;  
-        LocalTime inicioDescanso = null; 
+        LocalTime inicioTrabajado = null;
+        LocalTime inicioDescanso = null;
+        
+        String accionAnterior = null;
 
         for (Registro reg : registros) {
             String accion = reg.getAccion().toLowerCase();
             LocalTime hora = reg.getHora();
 
-            if (hora == null) continue;  
+            if (hora == null) continue;
 
             switch (accion) {
-                case "entrada":
-                case "reanudacion":
+	            case "entrada":
+	                if ("entrada".equals(accionAnterior)) {
+	                    inicioTrabajado = null;
+	                } else if ("retorno".equals(accionAnterior)) {
+	                    inicioTrabajado = null;
+	                    inicioTrabajado = hora;
+	                } else if ("pausa".equals(accionAnterior)) {
+	                    inicioDescanso = null; 
+	                    inicioTrabajado = hora;
+	                } else {
+	                    if (inicioTrabajado != null) {
+	                        Duration trabajado = Duration.between(inicioTrabajado, hora);
+	                        totalTrabajado = totalTrabajado.plus(trabajado);
+	                    }
+	                    inicioTrabajado = hora;
+	                }
+	                break;
+
+                case "pausa":
+                    if (inicioTrabajado != null) {
+                        Duration trabajado = Duration.between(inicioTrabajado, hora);
+                        totalTrabajado = totalTrabajado.plus(trabajado);
+                        inicioTrabajado = null;
+                    }
+                    inicioDescanso = hora;
+                    break;
+
+                case "retorno":
                     if (inicioDescanso != null) {
                         Duration descanso = Duration.between(inicioDescanso, hora);
                         totalDescanso = totalDescanso.plus(descanso);
                         inicioDescanso = null;
                     }
-                    if (inicioIntervalo == null) {
-                        inicioIntervalo = hora;
+                    if (inicioTrabajado == null) {
+                        inicioTrabajado = hora;
                     }
-                    break;
-
-                case "pausa":
-                    if (inicioIntervalo != null) {
-                        Duration trabajado = Duration.between(inicioIntervalo, hora);
-                        totalTrabajado = totalTrabajado.plus(trabajado);
-                        inicioIntervalo = null;
-                    }
-                    inicioDescanso = hora;
                     break;
 
                 case "salida":
-                    if (inicioIntervalo != null) {
-                        Duration trabajado = Duration.between(inicioIntervalo, hora);
+                    if (inicioTrabajado != null) {
+                        Duration trabajado = Duration.between(inicioTrabajado, hora);
                         totalTrabajado = totalTrabajado.plus(trabajado);
-                        inicioIntervalo = null;
+                        inicioTrabajado = null;
                     }
                     if (inicioDescanso != null) {
                         Duration descanso = Duration.between(inicioDescanso, hora);
@@ -477,6 +540,22 @@ public class ModRegistro extends AppLayout {
                     }
                     break;
             }
+            accionAnterior = accion;
+        }
+
+        if (inicioTrabajado != null || inicioDescanso != null) {
+            Registro ultimo = registros.get(registros.size() - 1);
+            LocalTime ultimaHora = ultimo.getHora();
+
+            if (inicioTrabajado != null) {
+                Duration trabajado = Duration.between(inicioTrabajado, ultimaHora);
+                totalTrabajado = totalTrabajado.plus(trabajado);
+            }
+
+            if (inicioDescanso != null) {
+                Duration descanso = Duration.between(inicioDescanso, ultimaHora);
+                totalDescanso = totalDescanso.plus(descanso);
+            }
         }
 
         registros.sort((r1, r2) -> {
@@ -484,7 +563,7 @@ public class ModRegistro extends AppLayout {
             if (cmpFecha != 0) return cmpFecha;
             return r2.getHora().compareTo(r1.getHora());
         });
-        
+
         long horas = totalTrabajado.toHours();
         long minutos = totalTrabajado.toMinutes() % 60;
         return String.format("%02d:%02d", horas, minutos);
@@ -534,10 +613,15 @@ public class ModRegistro extends AppLayout {
         }
 
         Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(12);
+        if(usuarioActualAux.getId() == -1) {
+        	fechasParrafo.setMarginBottom(15);
+        }
         document.add(fechasParrafo);
-
-        Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
-        document.add(horasParrafo);
+        
+        if(usuarioActualAux.getId() != -1) {
+        	Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
+            document.add(horasParrafo);
+        }
         
         Table table = new Table(6);
         
@@ -634,11 +718,13 @@ public class ModRegistro extends AppLayout {
         dateRow.createCell(0).setCellValue(rangoFechas);
         sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 4));
 
-        String horasTrabajadas = calcularHorasTrabajadas(registros);
-        XSSFRow hoursRow = sheet.createRow(3);
-        hoursRow.createCell(0).setCellValue("Total trabajado: " + horasTrabajadas + " horas");
-        sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 4));
-  
+        if (usuarioActualAux != null && usuarioActualAux.getId() != -1) {
+            String horasTrabajadas = calcularHorasTrabajadas(registros);
+            XSSFRow hoursRow = sheet.createRow(3);
+            hoursRow.createCell(0).setCellValue("Total trabajado: " + horasTrabajadas + " horas");
+            sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 4));
+        }
+
         XSSFRow headerRow = sheet.createRow(4);
         headerRow.createCell(0).setCellValue("FECHA");
         headerRow.createCell(1).setCellValue("ACCION");
@@ -712,5 +798,132 @@ public class ModRegistro extends AppLayout {
     	
     	logs_modificacionesRepositorio.save(registroLog);
     	actualizarGrid(fechaInicio.getValue(), fechaFin.getValue(), selectValidado);
+    }
+    
+    private void mostrarDialogoNotificaciones() {
+    	Dialog dialog = new Dialog();
+        dialog.setWidth("550px");
+        dialog.setCloseOnEsc(true);
+        dialog.setCloseOnOutsideClick(true);
+
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSpacing(true);
+        layout.setPadding(false);
+
+        Span titulo = new Span("Notificaciones");
+        titulo.getStyle().set("font-weight", "bold").set("font-size", "18px");
+        layout.add(titulo);
+
+        List<Notificaciones> pendientes = notificacionesRepositorio.findByEstado(0);
+
+        if (pendientes.isEmpty()) {
+            Span sinNotificaciones = new Span("No hay notificaciones");
+            sinNotificaciones.getStyle().set("font-style", "italic").set("color", "#666").set("padding", "10px");
+            layout.add(sinNotificaciones);
+        } else {
+            for (Notificaciones notificacion : pendientes) {
+                HorizontalLayout tarjeta = new HorizontalLayout();
+                tarjeta.setWidthFull();
+                tarjeta.setJustifyContentMode(JustifyContentMode.BETWEEN);
+                tarjeta.getStyle().set("border", "1px solid #ccc").set("border-radius", "4px").set("box-shadow", "0 2px 5px rgba(0, 0, 0, 0.1)");
+
+                Span texto1 = new Span();
+                Span texto2 = new Span();
+                if ("PERMISO".equals(notificacion.getTipo())) {
+                	Optional<Permisos> permisoOptional = permisosRepositorio.findById(notificacion.getidAsociado());
+                	Permisos permisoNotificacion = permisoOptional.get();
+                	texto1 = new Span(permisoNotificacion.getMotivo() + " - " + notificacion.getSolicitante().getLoginUsuario());
+                	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                	if (permisoNotificacion.getFechaAux() == null) {
+                		texto2 = new Span(permisoNotificacion.getFecha().format(formatter));
+                	} else {
+                		texto2 = new Span(permisoNotificacion.getFecha().format(formatter) + " - " + permisoNotificacion.getFechaAux().format(formatter));
+                	}
+                } else {
+                	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
+                	Solicitudes solicitudNotificacion = solicitudesOptional.get();
+                	texto1 = new Span(solicitudNotificacion.getTipo() + " - " + notificacion.getSolicitante().getLoginUsuario());
+                	texto2 = new Span(solicitudNotificacion.getRegistro().getFechaRegistro() + " " + solicitudNotificacion.getRegistro().getAccion() + ", "+ solicitudNotificacion.getValorPrevio() + " a " + solicitudNotificacion.getValor());
+                }
+                
+                texto1.getStyle().set("font-weight", "500");
+                texto2.getStyle().set("font-weight", "500");
+
+                Image aceptarImagen = new Image("img/si.png", "Aceptar Icono");
+                aceptarImagen.setWidth("35px");
+                aceptarImagen.setHeight("35px");
+                aceptarImagen.getStyle().set("margin-top", "5px");
+                Button aceptar = new Button(aceptarImagen, ev -> {
+                    notificacion.setEstado(1);
+                    notificacion.setResolucion("ACEPTADO");
+                    if ("PERMISO".equals(notificacion.getTipo())) {
+                    	Optional<Permisos> permisoOptional = permisosRepositorio.findById(notificacion.getidAsociado());
+                    	Permisos permisoNotificacion = permisoOptional.get();
+                    	permisoNotificacion.setEstado("ACEPTADO");
+                    	permisosRepositorio.save(permisoNotificacion); 
+                    	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
+                    } else {
+                    	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
+                    	Solicitudes solicitudNotificacion = solicitudesOptional.get();
+                    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                    	LocalTime nuevaHora = LocalTime.parse(solicitudNotificacion.getValor(), formatter);
+                    	Registro registro = solicitudNotificacion.getRegistro();
+                    	registro.setHora(nuevaHora);
+                    	registro.setValidado(1);
+                    	solicitudNotificacion.setEstado("ACEPTADO");
+                        registroRepositorio.save(registro);
+                    	solicitudesRepositorio.save(solicitudNotificacion); 
+                    	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
+                    }
+                    notificacionesRepositorio.save(notificacion);
+                    dialog.close(); 
+                    UI.getCurrent().getPage().reload();
+
+                });
+                aceptar.getStyle().set("background-color", "white").set("cursor", "pointer");
+                
+                Image rechazarImagen = new Image("img/no.png", "Rechazar Icono");
+                rechazarImagen.setWidth("45px");
+                rechazarImagen.setHeight("45px");
+                rechazarImagen.getStyle().set("margin-top", "5px");
+                Button rechazar = new Button(rechazarImagen, ev -> {
+                	 notificacion.setEstado(1);
+                	 notificacion.setResolucion("RECHAZADO");
+                     if ("PERMISO".equals(notificacion.getTipo())) {
+                     	Optional<Permisos> permisoOptional = permisosRepositorio.findById(notificacion.getidAsociado());
+                     	Permisos permisoNotificacion = permisoOptional.get();
+                     	permisoNotificacion.setEstado("RECHAZADO");
+                     	permisosRepositorio.save(permisoNotificacion); 
+                     	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
+                     } else {
+                     	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
+                     	Solicitudes solicitudNotificacion = solicitudesOptional.get();
+                     	Registro registro = solicitudNotificacion.getRegistro();
+                     	registro.setValidado(1);
+                     	solicitudNotificacion.setEstado("RECHAZADO");
+                        registroRepositorio.save(registro);
+                     	solicitudesRepositorio.save(solicitudNotificacion); 
+                     	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
+                     }
+                     notificacionesRepositorio.save(notificacion);
+                     dialog.close(); 
+                     UI.getCurrent().getPage().reload();
+                });
+                rechazar.getStyle().set("background-color", "white").set("cursor", "pointer");
+
+                VerticalLayout textos = new VerticalLayout(texto1, texto2);
+                textos.setSpacing(false);
+                textos.setPadding(false);
+                textos.setMargin(false);
+                textos.getStyle().set("padding", "5px").set("margin", "5px");
+                HorizontalLayout botones = new HorizontalLayout(aceptar, rechazar);
+                botones.setSpacing(false);
+                botones.getStyle().set("margin-top", "15px");
+                tarjeta.add(textos, botones);
+                layout.add(tarjeta);
+            }
+        }
+        dialog.add(layout);
+        dialog.open();
     }
 }

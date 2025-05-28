@@ -28,6 +28,9 @@ public class Solicitudes {
 	@Column(name = "campo", nullable = false)
 	private String campo;
 	
+	@Column(name = "valorPrevio", nullable = false)
+	private String valorPrevio;
+	
 	@Column(name = "valor", nullable = false)
 	private String valor;
 	
@@ -86,6 +89,14 @@ public class Solicitudes {
         this.campo = campo;
     }
 
+    public String getValorPrevio() {
+        return valorPrevio;
+    }
+
+    public void setValorPrevio(String valorPrevio) {
+        this.valorPrevio = valorPrevio;
+    }
+    
     public String getValor() {
         return valor;
     }

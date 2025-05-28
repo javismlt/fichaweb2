@@ -19,7 +19,7 @@ public class EmailServicio {
         message.setTo(to);
         message.setSubject("Recuperación de contraseña");
         message.setText(body);
-
+        message.setFrom("demo@gtssl.com"); 
         mailSender.send(message);
     }
 }

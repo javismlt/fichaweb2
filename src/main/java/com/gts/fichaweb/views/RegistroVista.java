@@ -5,6 +5,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.router.Route;
@@ -17,34 +18,53 @@ import com.vaadin.flow.component.html.Span;
 import repositorios.UsuarioRepositorio;
 import repositorios.RegistroRepositorio;
 import modelos.Usuario;
+import modelos.Notificaciones;
+import modelos.Permisos;
 import modelos.Registro;
+import modelos.Solicitudes;
+import modelos.Notificaciones;
+import modelos.Solicitudes;
+import modelos.Permisos;
+import repositorios.NotificacionesRepositorio;
+import repositorios.SolicitudesRepositorio;
+import repositorios.PermisosRepositorio;
 import java.time.*;
 import com.vaadin.flow.component.select.Select;
 import java.util.List;
+import java.util.Optional;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.notification.Notification;
 import java.util.stream.Collectors;
 import java.time.format.DateTimeFormatter;
+import com.vaadin.flow.component.contextmenu.MenuItem;
 
 @Route("registro")
 @CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
 public class RegistroVista extends AppLayout {
     private final UsuarioRepositorio usuarioRepositorio;
     private final RegistroRepositorio registroRepositorio;
-    private Usuario usuarioActual;
-    private Usuario usuarioAnterior;
-    private Usuario usuarioActualAux;
+    private final NotificacionesRepositorio notificacionesRepositorio; 
+    private final PermisosRepositorio permisosRepositorio; 
+    private final SolicitudesRepositorio solicitudesRepositorio; 
     private Button boton1;
     private Button boton2;
     private Button boton3;
     private Button boton4;
     private Button boton5;
-
-    public RegistroVista(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio) {
+    private Usuario usuarioActual;
+    private Usuario usuarioAnterior;
+    private Usuario usuarioActualAux;
+    private String nombreUsuario;
+    
+    public RegistroVista(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, NotificacionesRepositorio notificacionesRepositorio, PermisosRepositorio permisosRepositorio, SolicitudesRepositorio solicitudesRepositorio) {
         this.usuarioRepositorio = usuarioRepositorio;
         this.registroRepositorio = registroRepositorio;
-        String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
+        this.notificacionesRepositorio = notificacionesRepositorio;
+        this.permisosRepositorio = permisosRepositorio;
+        this.solicitudesRepositorio = solicitudesRepositorio;
+        
+        nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
         if (nombreUsuario == null) {
         	getElement().executeJs("window.location.href='/'");
         } else {
@@ -63,7 +83,15 @@ public class RegistroVista extends AppLayout {
         consulta.getElement().setAttribute("href", "/consulta");
         consulta.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
 
-        HorizontalLayout menuIzquierdo = new HorizontalLayout(registro, consulta);
+        Anchor permisos = new Anchor("permisos", "Permisos");
+        permisos.getElement().setAttribute("href", "/permisos");
+        permisos.getStyle().set("color", "black").set("text-decoration", "none").set("font-size", "16px");
+
+        if (usuarioActual != null && usuarioActual.getRol() == 3) {
+            permisos.setVisible(false);
+        }
+
+        HorizontalLayout menuIzquierdo = new HorizontalLayout(registro, consulta, permisos);
         menuIzquierdo.setSpacing(true);
         menuIzquierdo.getStyle().set("gap", "25px");
         menuIzquierdo.setAlignItems(Alignment.CENTER);
@@ -75,15 +103,54 @@ public class RegistroVista extends AppLayout {
         menuResponsive.setOpenOnClick(true);
         menuResponsive.addItem("Registro", e -> UI.getCurrent().navigate("registro"));
         menuResponsive.addItem("Consulta", e -> UI.getCurrent().navigate("consulta"));
+        MenuItem itemPermisos = menuResponsive.addItem("Permisos", e -> UI.getCurrent().navigate("permisos"));
+        if (usuarioActual != null && usuarioActual.getRol() == 3) {
+            itemPermisos.setVisible(false);
+        }
 
         menuIzquierdo.getElement().getClassList().add("menu-izquierdo");
         menuDesplegable.getElement().getClassList().add("menu-desplegable");
+        
+        Integer solicitanteId = (usuarioActualAux != null) ? usuarioActualAux.getId() : usuarioActual.getId();
+        int notificacionesPendientes = notificacionesRepositorio.countByEstadoAndSolicitanteIdAndResolucionNotNull(1, solicitanteId);
 
-        Button menuDerecho = new Button(nombreUsuario);
-        menuDerecho.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
+        Image correoImagen = new Image("img/correo.png", "Correo Icono");
+        correoImagen.setWidth("35px");
+        correoImagen.setHeight("35px");
+        correoImagen.getStyle().set("margin-top", "8px");
+        
+        Button btnNotificaciones = new Button(correoImagen);
+        btnNotificaciones.addClickListener(e -> mostrarDialogoNotificaciones());
+        btnNotificaciones.getStyle().set("font-size", "20px").set("background", "transparent").set("border", "none").set("cursor", "pointer").set("position", "relative");
 
-        ContextMenu contextMenu = new ContextMenu(menuDerecho);
+        Div notificacionesWrapper = new Div();
+        notificacionesWrapper.getStyle().set("position", "relative").set("display", "inline-block");
+        notificacionesWrapper.getElement().getClassList().add("btn-notificaciones");
+        notificacionesWrapper.add(btnNotificaciones);
+
+        if (notificacionesPendientes > 0) {
+            Span badge = new Span(String.valueOf(notificacionesPendientes));
+            badge.getStyle().set("background-color", "red").set("color", "white").set("border-radius", "50%").set("width", "18px").set("height", "18px").set("font-size", "14px").set("position", "absolute").set("top", "-5px").set("right", "-5px").set("display", "flex").set("align-items", "center").set("justify-content", "center");
+            notificacionesWrapper.add(badge);
+        }
+        
+        Button menuUser = new Button(nombreUsuario);
+        menuUser.getStyle().set("color", "black").set("font-size", "16px").set("cursor", "pointer").set("border", "1px solid black").set("border-radius", "4px");
+
+        Div menuUserWrapper = new Div();
+        menuUserWrapper.getStyle().set("position", "relative").set("display", "inline-block");
+        menuUserWrapper.add(menuUser);
+
+        if (notificacionesPendientes > 0) {
+            Span mobileBadge = new Span(String.valueOf(notificacionesPendientes));
+            mobileBadge.addClassName("mobile-badge");
+            mobileBadge.getStyle().set("background-color", "red").set("color", "white").set("border-radius", "50%").set("width", "16px").set("height", "16px").set("font-size", "12px").set("position", "absolute").set("top", "-5px").set("right", "-5px").set("display", "flex").set("align-items", "center").set("justify-content", "center");
+            menuUserWrapper.add(mobileBadge);
+        }
+
+        ContextMenu contextMenu = new ContextMenu(menuUser);
         contextMenu.setOpenOnClick(true);
+        contextMenu.addItem("Notificaciones (" + notificacionesPendientes + ")", e -> mostrarDialogoNotificaciones());
         contextMenu.addItem("Cerrar sesión", e -> {
             UI.getCurrent().access(() -> {
                 VaadinSession.getCurrent().close();
@@ -92,6 +159,12 @@ public class RegistroVista extends AppLayout {
                 });
             });
         });
+
+        HorizontalLayout menuDerecho = new HorizontalLayout();
+        menuDerecho.add(notificacionesWrapper, menuUserWrapper);
+        menuDerecho.setSpacing(true);
+        menuDerecho.getStyle().set("gap", "25px");
+        menuDerecho.setAlignItems(Alignment.CENTER);
 
         HorizontalLayout header = new HorizontalLayout(menuIzquierdo, menuDesplegable, menuDerecho);
         header.setWidthFull();
@@ -285,6 +358,8 @@ public class RegistroVista extends AppLayout {
                         Notification.show("PIN correcto, acceso concedido", 2000, Notification.Position.TOP_CENTER);
                         usuarioActualAux = usuarioSeleccionado; 
                         VaadinSession.getCurrent().setAttribute("UserManual", usuarioSeleccionado.getLoginUsuario());
+                        getElement().removeAllChildren(); 
+                        crearHeader(nombreUsuario);
                         cargarMenu(); 
                     } else {
                         Notification.show("PIN incorrecto inténtalo de nuevo", 2000, Notification.Position.TOP_CENTER);
@@ -444,5 +519,84 @@ public class RegistroVista extends AppLayout {
         } else {
         	return "M"; 
         }
+    }
+    
+    private void mostrarDialogoNotificaciones() {
+    	Dialog dialog = new Dialog();
+        dialog.setWidth("550px");
+        dialog.setCloseOnEsc(true);
+        dialog.setCloseOnOutsideClick(true);
+
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSpacing(true);
+        layout.setPadding(false);
+
+        Span titulo = new Span("Notificaciones");
+        titulo.getStyle().set("font-weight", "bold").set("font-size", "18px");
+        layout.add(titulo);
+
+        Integer solicitanteId = (usuarioActualAux != null) ? usuarioActualAux.getId() : usuarioActual.getId();
+        List<Notificaciones> pendientes = notificacionesRepositorio.findByEstadoAndSolicitanteIdAndResolucionNotNull(1, solicitanteId);
+        
+        if (pendientes.isEmpty()) {
+            Span sinNotificaciones = new Span("No hay notificaciones");
+            sinNotificaciones.getStyle().set("font-style", "italic").set("color", "#666").set("padding", "10px");
+            layout.add(sinNotificaciones);
+        } else {
+            for (Notificaciones notificacion : pendientes) {
+                HorizontalLayout tarjeta = new HorizontalLayout();
+                tarjeta.setWidthFull();
+                tarjeta.setJustifyContentMode(JustifyContentMode.BETWEEN);
+                tarjeta.getStyle().set("border", "1px solid #ccc").set("border-radius", "4px").set("box-shadow", "0 2px 5px rgba(0, 0, 0, 0.1)");
+
+                Span texto1 = new Span();
+                Span texto2 = new Span();
+                
+                if ("PERMISO".equals(notificacion.getTipo())) {
+                	Optional<Permisos> permisoOptional = permisosRepositorio.findById(notificacion.getidAsociado());
+                	Permisos permisoNotificacion = permisoOptional.get();
+                	texto1 = new Span(permisoNotificacion.getMotivo() + " - " + notificacion.getResolucion());
+                	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                	if (permisoNotificacion.getFechaAux() == null) {
+                		texto2 = new Span(permisoNotificacion.getFecha().format(formatter));
+                	} else {
+                		texto2 = new Span(permisoNotificacion.getFecha().format(formatter) + " - " + permisoNotificacion.getFechaAux().format(formatter));
+                	}
+                } else {
+                	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
+                	Solicitudes solicitudNotificacion = solicitudesOptional.get();
+                	texto1 = new Span(solicitudNotificacion.getTipo() + " - " + notificacion.getResolucion());
+                	texto2 = new Span(solicitudNotificacion.getRegistro().getFechaRegistro() + " " + solicitudNotificacion.getRegistro().getAccion() + ", "+ solicitudNotificacion.getValorPrevio() + " a " + solicitudNotificacion.getValor());
+                }
+                
+                texto1.getStyle().set("font-weight", "500");
+                texto2.getStyle().set("font-weight", "500");
+                
+                Image rechazarImagen = new Image("img/no.png", "Rechazar Icono");
+                rechazarImagen.setWidth("45px");
+                rechazarImagen.setHeight("45px");
+                rechazarImagen.getStyle().set("margin-top", "5px");
+                Button rechazar = new Button(rechazarImagen, ev -> {
+                	 notificacion.setEstado(2);
+                     notificacionesRepositorio.save(notificacion);
+                     dialog.close(); 
+                     UI.getCurrent().getPage().reload();
+                });
+                rechazar.getStyle().set("background-color", "white").set("cursor", "pointer");
+
+                VerticalLayout textos = new VerticalLayout(texto1, texto2);
+                textos.setSpacing(false);
+                textos.setPadding(false);
+                textos.setMargin(false);
+                textos.getStyle().set("padding", "5px").set("margin", "5px");
+                HorizontalLayout botones = new HorizontalLayout(rechazar);
+                botones.setSpacing(false);
+                botones.getStyle().set("margin-top", "15px");
+                tarjeta.add(textos, botones);
+                layout.add(tarjeta);
+            }
+        }
+        dialog.add(layout);
+        dialog.open();
     }
 }

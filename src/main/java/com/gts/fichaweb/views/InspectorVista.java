@@ -64,7 +64,8 @@ public class InspectorVista extends AppLayout {
     private DatePicker fechaInicio;
     private DatePicker fechaFin;
     private Usuario usuarioActualAux;
-
+    private VerticalLayout contenidoPrincipal;
+    
     public InspectorVista(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, Logs_modificacionesRepositorio logs_modificacionesRepositorio) {
         this.registroRepositorio = registroRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
@@ -153,9 +154,23 @@ public class InspectorVista extends AppLayout {
 	        Usuario usuarioSeleccionado = event.getValue();
 	        if (usuarioSeleccionado != null && usuarioSeleccionado.getId() == -1) { 
 	        	usuarioActualAux = usuarioSeleccionado;
+	        	if (usuarioActualAux.getId() != -1) {
+                    if (contenidoPrincipal.getChildren().noneMatch(c -> c.equals(totalHorasTrabajadasLabel))) {
+                        contenidoPrincipal.addComponentAtIndex(1, totalHorasTrabajadasLabel);
+                    }
+                } else {
+                    contenidoPrincipal.remove(totalHorasTrabajadasLabel);
+                }
 	            actualizarGrid(fechaInicio.getValue(), fechaFin.getValue());
 	        } else if (usuarioSeleccionado != null) {
 	            usuarioActualAux = usuarioSeleccionado;
+	            if (usuarioActualAux.getId() != -1) {
+                    if (contenidoPrincipal.getChildren().noneMatch(c -> c.equals(totalHorasTrabajadasLabel))) {
+                        contenidoPrincipal.addComponentAtIndex(1, totalHorasTrabajadasLabel);
+                    }
+                } else {
+                    contenidoPrincipal.remove(totalHorasTrabajadasLabel);
+                }
                 actualizarGrid(fechaInicio.getValue(), fechaFin.getValue());
 	        }
 	    });
@@ -192,10 +207,6 @@ public class InspectorVista extends AppLayout {
         
         fechaInicio.addValueChangeListener(event -> actualizarGrid(fechaInicio.getValue(), fechaFin.getValue()));
         fechaFin.addValueChangeListener(event -> actualizarGrid(fechaInicio.getValue(), fechaFin.getValue()));
-        
-        totalHorasTrabajadasLabel = new Span("");
-        totalHorasTrabajadasLabel.getStyle().set("font-weight", "bold").set("font-size", "16px");
-        totalHorasTrabajadasLabel.addClassName("horas-trabajadas-label");
        
         Button menuPdf = new Button("Descarga PDF ▼");
         menuPdf.getStyle().set("margin-top", "37px").set("color", "white").set("background-color", "red").set("cursor", "pointer");
@@ -231,7 +242,12 @@ public class InspectorVista extends AppLayout {
         
         fechasLayout.add(menuPdf, menuExcel);
 
-        VerticalLayout contenidoPrincipal = new VerticalLayout(fechasLayout, totalHorasTrabajadasLabel, grid); 
+        totalHorasTrabajadasLabel = new Span("");
+        totalHorasTrabajadasLabel.getStyle().set("font-weight", "bold").set("font-size", "16px");
+        totalHorasTrabajadasLabel.addClassName("horas-trabajadas-label");
+
+        contenidoPrincipal = new VerticalLayout(fechasLayout, grid);
+        this.contenidoPrincipal = contenidoPrincipal;
         contenidoPrincipal.setPadding(true);
         contenidoPrincipal.setAlignItems(Alignment.START);
         contenidoPrincipal.setWidthFull();
@@ -280,42 +296,61 @@ public class InspectorVista extends AppLayout {
         Duration totalTrabajado = Duration.ZERO;
         Duration totalDescanso = Duration.ZERO;
 
-        LocalTime inicioIntervalo = null;  
-        LocalTime inicioDescanso = null; 
+        LocalTime inicioTrabajado = null;
+        LocalTime inicioDescanso = null;
+        
+        String accionAnterior = null;
 
         for (Registro reg : registros) {
             String accion = reg.getAccion().toLowerCase();
             LocalTime hora = reg.getHora();
 
-            if (hora == null) continue;  
+            if (hora == null) continue;
 
             switch (accion) {
-                case "entrada":
-                case "reanudacion":
+	            case "entrada":
+	                if ("entrada".equals(accionAnterior)) {
+	                    inicioTrabajado = null;
+	                } else if ("retorno".equals(accionAnterior)) {
+	                    inicioTrabajado = null;
+	                    inicioTrabajado = hora;
+	                } else if ("pausa".equals(accionAnterior)) {
+	                    inicioDescanso = null; 
+	                    inicioTrabajado = hora;
+	                } else {
+	                    if (inicioTrabajado != null) {
+	                        Duration trabajado = Duration.between(inicioTrabajado, hora);
+	                        totalTrabajado = totalTrabajado.plus(trabajado);
+	                    }
+	                    inicioTrabajado = hora;
+	                }
+	                break;
+
+                case "pausa":
+                    if (inicioTrabajado != null) {
+                        Duration trabajado = Duration.between(inicioTrabajado, hora);
+                        totalTrabajado = totalTrabajado.plus(trabajado);
+                        inicioTrabajado = null;
+                    }
+                    inicioDescanso = hora;
+                    break;
+
+                case "retorno":
                     if (inicioDescanso != null) {
                         Duration descanso = Duration.between(inicioDescanso, hora);
                         totalDescanso = totalDescanso.plus(descanso);
                         inicioDescanso = null;
                     }
-                    if (inicioIntervalo == null) {
-                        inicioIntervalo = hora;
+                    if (inicioTrabajado == null) {
+                        inicioTrabajado = hora;
                     }
-                    break;
-
-                case "pausa":
-                    if (inicioIntervalo != null) {
-                        Duration trabajado = Duration.between(inicioIntervalo, hora);
-                        totalTrabajado = totalTrabajado.plus(trabajado);
-                        inicioIntervalo = null;
-                    }
-                    inicioDescanso = hora;
                     break;
 
                 case "salida":
-                    if (inicioIntervalo != null) {
-                        Duration trabajado = Duration.between(inicioIntervalo, hora);
+                    if (inicioTrabajado != null) {
+                        Duration trabajado = Duration.between(inicioTrabajado, hora);
                         totalTrabajado = totalTrabajado.plus(trabajado);
-                        inicioIntervalo = null;
+                        inicioTrabajado = null;
                     }
                     if (inicioDescanso != null) {
                         Duration descanso = Duration.between(inicioDescanso, hora);
@@ -324,6 +359,22 @@ public class InspectorVista extends AppLayout {
                     }
                     break;
             }
+            accionAnterior = accion;
+        }
+
+        if (inicioTrabajado != null || inicioDescanso != null) {
+            Registro ultimo = registros.get(registros.size() - 1);
+            LocalTime ultimaHora = ultimo.getHora();
+
+            if (inicioTrabajado != null) {
+                Duration trabajado = Duration.between(inicioTrabajado, ultimaHora);
+                totalTrabajado = totalTrabajado.plus(trabajado);
+            }
+
+            if (inicioDescanso != null) {
+                Duration descanso = Duration.between(inicioDescanso, ultimaHora);
+                totalDescanso = totalDescanso.plus(descanso);
+            }
         }
 
         registros.sort((r1, r2) -> {
@@ -331,7 +382,7 @@ public class InspectorVista extends AppLayout {
             if (cmpFecha != 0) return cmpFecha;
             return r2.getHora().compareTo(r1.getHora());
         });
-        
+
         long horas = totalTrabajado.toHours();
         long minutos = totalTrabajado.toMinutes() % 60;
         return String.format("%02d:%02d", horas, minutos);
@@ -381,10 +432,15 @@ public class InspectorVista extends AppLayout {
         }
 
         Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(12);
+        if(usuarioActualAux.getId() == -1) {
+        	fechasParrafo.setMarginBottom(15);
+        }
         document.add(fechasParrafo);
-
-        Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
-        document.add(horasParrafo);
+        
+        if(usuarioActualAux.getId() != -1) {
+        	Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
+            document.add(horasParrafo);
+        }
         
         Table table = new Table(6);
         

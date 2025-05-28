@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
+import modelos.Roles;
 
 @Repository
 public interface UsuarioRepositorio extends JpaRepository<Usuario, Integer> {
@@ -16,4 +17,5 @@ public interface UsuarioRepositorio extends JpaRepository<Usuario, Integer> {
 	boolean existsByCodPersonalAndEmpresa_Id(int codPersonal, int empresaId);
 	int countByEmpresaIdAndActivo(Integer id_empresa, int activo);
 	Optional<Usuario> findByEmpresa_IdAndRol_Id(Integer empresaId, int rolId);
+	Usuario findByRolAndEmpresa_Id(Roles rol, Integer empresaId);
 }

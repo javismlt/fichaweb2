@@ -67,6 +67,7 @@ public class LoginVista extends VerticalLayout {
         });
     }
 
+    
     private void autenticarUsuario(String username, String password) {
         Usuario usuario = usuarioRepositorio.findByLoginUsuario(username);
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();

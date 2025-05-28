@@ -10,16 +10,13 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
-
 import jakarta.annotation.security.PermitAll;
 import modelos.PasswordToken;
 import modelos.Usuario;
 import repositorios.UsuarioRepositorio;
 import repositorios.PasswordTokenRepositorio;
 import servicios.EmailServicio;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
