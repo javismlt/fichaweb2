@@ -5,81 +5,120 @@ import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.dependency.CssImport;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
+import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
 import modelos.Empresa;
 import modelos.Notificaciones;
 import modelos.Permisos;
 import modelos.Registro;
 import modelos.Solicitudes;
 import modelos.Usuario;
+import modelos.ConfigEmpresas;
+import repositorios.ConfigEmpresasRepositorio;
 import repositorios.EmpresaRepositorio;
 import repositorios.UsuarioRepositorio;
-import repositorios.RegistroRepositorio;
 import servicios.EmailNotificacion;
-import servicios.EmpresaServicio;
-import org.springframework.transaction.annotation.Transactional;
+import repositorios.RegistroRepositorio;
 import modelos.Notificaciones;
 import modelos.Solicitudes;
 import modelos.Permisos;
 import repositorios.NotificacionesRepositorio;
 import repositorios.SolicitudesRepositorio;
 import repositorios.PermisosRepositorio;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Stream;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.util.Optional;
 
-@Route("listempresas")
+@Route("configempresa/:id") 
 @CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
-public class ListEmpresas extends AppLayout {
-	private final EmpresaServicio empresaServicio; 
+public class ModConfigEmailEmpresa extends AppLayout implements BeforeEnterObserver {
     private final EmpresaRepositorio empresaRepositorio;
+    private Empresa empresaActual;
     private final UsuarioRepositorio usuarioRepositorio;
-    private final RegistroRepositorio registroRepositorio;
     private Usuario usuarioActual;
-    private Button botonEmpresa;
+    private Usuario usuarioLogueado;
     private final NotificacionesRepositorio notificacionesRepositorio; 
     private final PermisosRepositorio permisosRepositorio; 
     private final SolicitudesRepositorio solicitudesRepositorio; 
+    private final RegistroRepositorio registroRepositorio; 
+    private final ConfigEmpresasRepositorio configEmpresasRepositorio; 
     private final EmailNotificacion emailNotificacion;
+    private ConfigEmpresas configActual;
     
-    public ListEmpresas(UsuarioRepositorio usuarioRepositorio, EmpresaRepositorio empresaRepositorio, RegistroRepositorio registroRepositorio, EmpresaServicio empresaServicio, NotificacionesRepositorio notificacionesRepositorio, PermisosRepositorio permisosRepositorio, SolicitudesRepositorio solicitudesRepositorio, EmailNotificacion emailNotificacion) {
+    public ModConfigEmailEmpresa(ConfigEmpresasRepositorio configEmpresasRepositorio, EmpresaRepositorio empresaRepositorio, UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, NotificacionesRepositorio notificacionesRepositorio, PermisosRepositorio permisosRepositorio, SolicitudesRepositorio solicitudesRepositorio, EmailNotificacion emailNotificacion) {
+        this.empresaRepositorio = empresaRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
-        this.empresaRepositorio = empresaRepositorio;  
-        this.registroRepositorio = registroRepositorio;  
-        this.empresaServicio = empresaServicio;
         this.notificacionesRepositorio = notificacionesRepositorio;
         this.permisosRepositorio = permisosRepositorio;
         this.solicitudesRepositorio = solicitudesRepositorio;
+        this.registroRepositorio = registroRepositorio;
         this.emailNotificacion = emailNotificacion;
-        
+        this.configEmpresasRepositorio = configEmpresasRepositorio;
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        String idParam = event.getRouteParameters().get("id").orElse(null);
+
+        if (idParam == null) {
+            Notification.show("No se proporcionó un ID válido en la URL", 2000, Notification.Position.TOP_CENTER);
+            getElement().executeJs("window.location.href='/listempresas'");
+            return;
+        }
+
         String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
+        Usuario usuarioLogueado = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
+    		this.usuarioLogueado = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
         if (nombreUsuario == null) {
             getElement().executeJs("window.location.href='/'");
-        } else {
-            this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
-            if (usuarioActual.getRol() == 1 || usuarioActual.getRol() == 2) {
-            	crearHeader(nombreUsuario);
-            	mostrarEmpresas();
-            } else {
-            	Notification.show("Usuario no administrador", 2000, Notification.Position.TOP_CENTER);
-                getElement().executeJs("setTimeout(() => window.location.href='/registro', 2000)");
-                return;
-            }
+            return;
         }
+
+        this.usuarioActual = usuarioRepositorio.findByLoginUsuario(nombreUsuario);
+        if (usuarioActual == null) {
+            Notification.show("Usuario no encontrado", 2000, Notification.Position.TOP_CENTER);
+            getElement().executeJs("window.location.href='/'");
+            return;
+        }
+
+        Empresa empresa = null;
+        try {
+            empresa = empresaRepositorio.findById(Integer.parseInt(idParam)).orElse(null);
+        } catch (NumberFormatException e) {
+            Notification.show("El ID de la empresa no es válido", 2000, Notification.Position.TOP_CENTER);
+            getElement().executeJs("window.location.href='/listempresas'");
+            return;
+        }
+
+        if (empresa == null) {
+            Notification.show("No se encontró la empresa con ID: " + idParam, 2000, Notification.Position.TOP_CENTER);
+            getElement().executeJs("window.location.href='/listempresas'");
+            return;
+        }
+
+        this.empresaActual = empresa;
+        crearHeader(nombreUsuario);
+        cargarDatosFormulario();
     }
 
     private void crearHeader(String nombreUsuario) {
@@ -176,182 +215,61 @@ public class ListEmpresas extends AppLayout {
         addToNavbar(header);
     }	
 
-    private void mostrarEmpresas() {
-        H2 titulo = new H2("Empresas");
-        titulo.getStyle().set("margin-top", "8px").set("text-align", "center");
+    private void cargarDatosFormulario() {
+    	ConfigEmpresas configActual = configEmpresasRepositorio.findByEmpresaId_Id(empresaActual.getId()).orElse(null);
+    	
+    	TextField campo1 = new TextField("Host");
+    	campo1.setValue(configActual != null && configActual.getMailHost() != null ? configActual.getMailHost() : "");
+    	TextField campo2 = new TextField("Puerto");
+    	campo2.setValue(configActual != null && configActual.getMailPort() != null ? String.valueOf(configActual.getMailPort()) : "");
+    	TextField campo3 = new TextField("Correo Electrónico");
+    	campo3.setValue(configActual != null && configActual.getMailUser() != null ? configActual.getMailUser() : "");
+    	TextField campo4 = new TextField("Contraseña Email");
+    	campo4.setValue(configActual != null && configActual.getMailPassword() != null ? configActual.getMailPassword() : "");
+
+        Stream.of(campo1, campo2, campo3, campo4).forEach(tf -> tf.setWidth("300px"));
         
-        botonEmpresa = new Button("+ Añadir Empresa");
-        botonEmpresa.addClickListener(e -> {
-            UI.getCurrent().navigate("addempresa");
-        });
-        botonEmpresa.getStyle().set("font-size", "12px").set("margin-left", "10px").set("margin-top", "20px").set("background-color", "green").set("color", "white").set("cursor", "pointer").set("border", "none");
+        Button btnConfigurar = new Button("Guardar");
+        btnConfigurar.setWidth("100px");
+        btnConfigurar.setHeight("40px");
+        btnConfigurar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px");
         
-        botonEmpresa.setVisible(usuarioActual.getRol() == 1);
-        
-        HorizontalLayout tituloConBoton = new HorizontalLayout(titulo, botonEmpresa);
-		tituloConBoton.setAlignItems(Alignment.CENTER);
-		tituloConBoton.setJustifyContentMode(JustifyContentMode.CENTER);
-		tituloConBoton.setWidthFull();
-		tituloConBoton.getStyle().set("margin-bottom", "20px");
-		
-        List<Empresa> empresas; 
-        
-        if (usuarioActual.getRol() == 2) {
-            Integer empresaId = usuarioActual.getEmpresa().getId();
-            Empresa empresa = empresaRepositorio.findById(empresaId).orElseThrow();
-            empresas = List.of(empresa);
-        } else {
-            empresas = empresaRepositorio.findAll();
-        }
-
-        VerticalLayout listaEmpresas = new VerticalLayout();
-        listaEmpresas.setPadding(true);
-        listaEmpresas.setSpacing(true);
-        listaEmpresas.setAlignItems(Alignment.CENTER);
-        listaEmpresas.setWidthFull();
-
-        for (Empresa empresa : empresas) {
-            String textoUsuario = empresa.getNombreComercial() + " (" + empresa.getRazonSocial() + ")";
-            Span infoUsuario = new Span(textoUsuario);
-            infoUsuario.getStyle()
-                .set("font-size", "16px")
-                .set("flex-grow", "1")
-                .set("text-align", "center");
-
-            Image configImagen = new Image("img/ajustes.png", "Ajustes Icono");
-            configImagen.setWidth("25px");
-            configImagen.setHeight("25px");
-            configImagen.getStyle().set("margin-top", "5px");
-            
-            Button btnConfig = new Button("", configImagen, click -> {
-                UI.getCurrent().navigate("configempresa/" + empresa.getId());
-            });
-            btnConfig.getStyle()
-                .set("background-color", "#bfbfbf")
-                .set("color", "white")
-                .set("cursor", "pointer")
-                .set("border", "1px solid black");  
-            
-            Button btnModificar = new Button("Modificar", click -> {
-                UI.getCurrent().navigate("modempresa/" + empresa.getId());
-            });
-            btnModificar.getStyle()
-                .set("background-color", "#007BFF")
-                .set("color", "white")
-                .set("cursor", "pointer")
-                .set("border", "none");
-
-            Button btnEliminar = new Button("Eliminar", e -> {
-                Confirmacion(empresa);
-            });
-            btnEliminar.getStyle()
-                .set("background-color", "red")
-                .set("color", "white")
-                .set("cursor", "pointer")
-                .set("border", "none");
-
-            Button btnActivar = new Button(empresa.getActivo() == 1 ? "Activo" : "Activar");
-            btnActivar.setWidth("90px");
-            btnActivar.getStyle()
-                .set("background-color", empresa.getActivo() == 1 ? "green" : "#bfbfbf")
-                .set("color", "white")
-                .set("cursor", "pointer")
-                .set("border", "none");
-            
-            btnActivar.addClickListener(e -> cambiarEstado(empresa, btnActivar));
-
-            HorizontalLayout botones = new HorizontalLayout(btnConfig, btnModificar, btnEliminar, btnActivar);
-            botones.setSpacing(true);
-            botones.setAlignItems(Alignment.CENTER);
-            botones.getStyle().set("flex-grow", "0");
-
-            HorizontalLayout filaUsuario = new HorizontalLayout(infoUsuario, botones);
-            filaUsuario.setWidthFull();
-            filaUsuario.setAlignItems(Alignment.CENTER);
-            filaUsuario.setJustifyContentMode(JustifyContentMode.START);
-            filaUsuario.getStyle()
-                .set("max-width", "800px")
-                .set("margin", "0 auto");
-
-            listaEmpresas.add(filaUsuario);
-        }
-
-        VerticalLayout contenedorCentro = new VerticalLayout();
-        contenedorCentro.setAlignItems(Alignment.CENTER);
-        contenedorCentro.setJustifyContentMode(JustifyContentMode.CENTER);
-        contenedorCentro.add(tituloConBoton, listaEmpresas);
-
-        setContent(contenedorCentro);
-    }
-
-    
-    private void Confirmacion(Empresa empresa) {
-        Dialog confirmacionDialogo = new Dialog();
-        confirmacionDialogo.setCloseOnEsc(true);
-        confirmacionDialogo.setCloseOnOutsideClick(true);
-
-        Span mensaje = new Span("¿Estás seguro de que quieres eliminar la empresa " + empresa.getNombreComercial() + "?");
-
-        VerticalLayout contenidoLayout = new VerticalLayout(mensaje);
-        contenidoLayout.getStyle().set("margin-bottom", "5px");
-
-        Button btnEliminar = new Button("Eliminar", e -> {
-            empresaServicio.eliminar(empresa); 
-            Notification notification = Notification.show("Empresa, usuarios y registros eliminados", 2000, Notification.Position.TOP_CENTER);
-            
-            notification.addDetachListener(detachEvent -> {
-                UI.getCurrent().access(() -> UI.getCurrent().getPage().reload());
-            });
-
-            confirmacionDialogo.close();
+        btnConfigurar.addClickListener(e -> {
+                configuracionEmail(empresaActual, campo1.getValue(), Integer.parseInt(campo2.getValue().toString()), campo3.getValue(), campo4.getValue());
+                UI.getCurrent().navigate("listempresas");
         });
 
-        btnEliminar.getStyle().set("background-color", "red").set("color", "white").set("border", "none");
+        VerticalLayout columna;
+        VerticalLayout layoutFormulario = new VerticalLayout();
 
-        Button btnCancelar = new Button("Cancelar", e -> {
-            confirmacionDialogo.close();
-        });
-        btnCancelar.getStyle().set("background-color", "#007BFF").set("color", "white").set("border", "none");
+        columna = new VerticalLayout(campo1, campo2, campo3, campo4, btnConfigurar);
+        columna.setJustifyContentMode(JustifyContentMode.CENTER);
+        columna.setAlignItems(Alignment.CENTER);
 
-        HorizontalLayout accionesLayout = new HorizontalLayout(btnEliminar, btnCancelar);
-        accionesLayout.setSpacing(true);
-        accionesLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.END);
+        layoutFormulario.add(new H2("Configuración Correo"), columna);
 
-        confirmacionDialogo.add(contenidoLayout, accionesLayout);
-        confirmacionDialogo.open();
+        layoutFormulario.setAlignItems(Alignment.CENTER);
+        layoutFormulario.setWidthFull();
+        layoutFormulario.getStyle().set("padding", "20px");
+
+        setContent(layoutFormulario);
+    }
+
+	
+    private void configuracionEmail(Empresa empresa, String host, Integer puerto, String email, String password) {
+    	ConfigEmpresas config = new ConfigEmpresas();
+    	
+    	config.setEmpresaId(empresa);
+    	config.setMailHost(host);
+    	config.setMailPort(puerto);
+    	config.setMailUser(email);
+    	config.setMailPassword(password);
+    	
+    	configEmpresasRepositorio.save(config);
+	    Notification.show("Configuración añadida correctamente", 2000, Notification.Position.TOP_CENTER);
     }
     
-    private void cambiarEstado(Empresa empresa, Button boton) {
-        if (empresa.getActivo() == 1) {
-        	empresa.setActivo(0);
-            empresaRepositorio.save(empresa);
-            
-            List<Usuario> usuarios = usuarioRepositorio.findByEmpresaId(empresa.getId());
-            for (Usuario usuario : usuarios) {
-                usuario.setActivo(0);
-                usuarioRepositorio.save(usuario);
-            }
-
-            boton.setText("Activar");
-            boton.getStyle().set("background-color", "#bfbfbf").set("color", "white");
-            Notification.show("Empresa " + empresa.getNombreComercial() + " desactivada", 2000, Notification.Position.TOP_CENTER);
-        } else {
-        	empresa.setActivo(1);
-        	empresaRepositorio.save(empresa);
-        	
-        	 List<Usuario> usuarios = usuarioRepositorio.findByEmpresaId(empresa.getId());
-             for (Usuario usuario : usuarios) {
-                 usuario.setActivo(1);
-                 usuarioRepositorio.save(usuario);
-             }
-
-            boton.setText("Activo");
-            boton.getStyle().set("background-color", "green").set("color", "white");
-            Notification.show("Empresa " + empresa.getNombreComercial() + " activada", 2000, Notification.Position.TOP_CENTER);
-        }
-    }
-    
-    private void mostrarDialogoNotificaciones() {
+	private void mostrarDialogoNotificaciones() {
     	Dialog dialog = new Dialog();
         dialog.setWidth("550px");
         dialog.setCloseOnEsc(true);
