@@ -424,7 +424,7 @@ public class PermisosVista extends AppLayout {
            
         permisosRepositorio.save(registroPermiso);
         registroNotificacion(registroPermiso);
-        emailNotificacion.enviarCorreoPermiso(Supervisor.getEmail(), usuarioActual.getNombre(), motivo, fecha, fechaAux); 
+        emailNotificacion.enviarCorreoPermiso(Supervisor.getEmpresa().getId(), Supervisor.getEmail(), usuarioActual.getNombre(), motivo, fecha, fechaAux); 
         crearContenido();
     }
     

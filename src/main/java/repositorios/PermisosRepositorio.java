@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface PermisosRepositorio extends JpaRepository<Permisos, Integer> {
 	List<Permisos> findBySolicitanteId(Integer solicitanteId);
 	Optional<Permisos> findById(Integer id);
+	List<Permisos> findBySolicitanteIdAndFechaBetweenAndEstado(Integer solicitanteId, LocalDate fechaInicio, LocalDate fechaFin, String estado);
+
 }

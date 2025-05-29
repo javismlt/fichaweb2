@@ -570,7 +570,15 @@ public class ModRegistro extends AppLayout {
     }
 
     private void generarPdf(Grid<Registro> grid) {
+    	LocalDate fechaInicioValor = fechaInicio.getValue() != null ? fechaInicio.getValue() : LocalDate.now();
+        LocalDate fechaFinValor = fechaFin.getValue() != null ? fechaFin.getValue() : LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String fechaInicioFormateada = fechaInicioValor.format(formatter);
+        String fechaFinFormateada = fechaFinValor.format(formatter);
+        
         List<Registro> registros = grid.getListDataView().getItems().collect(Collectors.toList());
+        List<Permisos> permisos = permisosRepositorio.findBySolicitanteIdAndFechaBetweenAndEstado(usuarioActualAux.getId(), fechaInicioValor, fechaFinValor, "ACEPTADO");
+        permisos.sort(Comparator.comparing(Permisos::getFecha));
 
         if (registros.isEmpty()) {
             Notification.show("No hay registros para generar el PDF", 2000, Notification.Position.TOP_CENTER);
@@ -587,41 +595,49 @@ public class ModRegistro extends AppLayout {
         Paragraph titulo = new Paragraph("FichaWeb").setFontSize(28) .setBold(); 
         document.add(titulo);
         
-        Paragraph titulo2 = new Paragraph("Registros de Jornada Laboral").setFontSize(14);
-        document.add(titulo2);
-        
-        if(usuarioActualAux.getId() == -1) {
-        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + ")").setFontSize(12);
-        	document.add(usuarioParrafo);
-        } else {
-        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActualAux.getNombre() + " (" + usuarioActualAux.getEmpresa().getNombreComercial() + ")").setFontSize(12);
-        	document.add(usuarioParrafo);
-        }
-
-        LocalDate fechaInicioValor = fechaInicio.getValue() != null ? fechaInicio.getValue() : LocalDate.now();
-        LocalDate fechaFinValor = fechaFin.getValue() != null ? fechaFin.getValue() : LocalDate.now();
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String fechaInicioFormateada = fechaInicioValor.format(formatter);
-        String fechaFinFormateada = fechaFinValor.format(formatter);
-
         String rangoFechas;
         if (fechaInicioValor.equals(fechaFinValor)) {
-            rangoFechas = "Fecha: " + fechaInicioFormateada;
+            rangoFechas = fechaInicioFormateada;
         } else {
-            rangoFechas = "Fecha: " + fechaInicioFormateada + " - " + fechaFinFormateada;
+            rangoFechas = fechaInicioFormateada + " - " + fechaFinFormateada;
         }
-
-        Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(12);
+        
         if(usuarioActualAux.getId() == -1) {
-        	fechasParrafo.setMarginBottom(15);
-        }
-        document.add(fechasParrafo);
+        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + "), " + rangoFechas).setFontSize(11);
+        	document.add(usuarioParrafo);
+        } else {
+        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActualAux.getNombre() + " (" + usuarioActualAux.getEmpresa().getNombreComercial() + "), " + rangoFechas).setFontSize(11);
+        	document.add(usuarioParrafo);
+        }       
         
         if(usuarioActualAux.getId() != -1) {
-        	Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
+        	Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(11);
             document.add(horasParrafo);
         }
+        
+        if(usuarioActualAux.getId() != -1) {
+	        if (!permisos.isEmpty()) {
+	        	Paragraph tituloPermisos = new Paragraph("Permisos solicitados").setFontSize(12);
+	            document.add(tituloPermisos);
+	        }
+	        for (Permisos permiso : permisos) {
+	        	String motivo = permiso.getMotivo();
+	            Paragraph permisoParrafo;
+	            String fechaFormateada = permiso.getFecha().format(formatter);
+	            if ("Vacaciones".equals(motivo)) {
+	                String fechaAuxFormateada = permiso.getFechaAux().format(formatter);
+	                permisoParrafo = new Paragraph("• " + motivo + ", " + fechaFormateada + " a " + fechaAuxFormateada);
+	            } else {
+	                permisoParrafo = new Paragraph("• " + motivo + ", " + fechaFormateada);
+	            }
+	        	permisoParrafo.setFontSize(11).setMarginLeft(20);
+	            document.add(permisoParrafo);
+	        }
+        }
+        
+        Paragraph tituloRegistros = new Paragraph("Registros de Jornada Laboral").setFontSize(12);
+        tituloRegistros.setMarginBottom(15);
+        document.add(tituloRegistros);
         
         Table table = new Table(6);
         
@@ -861,7 +877,7 @@ public class ModRegistro extends AppLayout {
                     	Permisos permisoNotificacion = permisoOptional.get();
                     	permisoNotificacion.setEstado("ACEPTADO");
                     	permisosRepositorio.save(permisoNotificacion); 
-                    	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
+                    	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getEmpresa().getId(), permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
                     } else {
                     	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
                     	Solicitudes solicitudNotificacion = solicitudesOptional.get();
@@ -873,7 +889,7 @@ public class ModRegistro extends AppLayout {
                     	solicitudNotificacion.setEstado("ACEPTADO");
                         registroRepositorio.save(registro);
                     	solicitudesRepositorio.save(solicitudNotificacion); 
-                    	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
+                    	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getEmpresa().getId(), solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
                     }
                     notificacionesRepositorio.save(notificacion);
                     dialog.close(); 
@@ -894,7 +910,7 @@ public class ModRegistro extends AppLayout {
                      	Permisos permisoNotificacion = permisoOptional.get();
                      	permisoNotificacion.setEstado("RECHAZADO");
                      	permisosRepositorio.save(permisoNotificacion); 
-                     	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
+                     	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getEmpresa().getId(), permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
                      } else {
                      	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
                      	Solicitudes solicitudNotificacion = solicitudesOptional.get();
@@ -903,7 +919,7 @@ public class ModRegistro extends AppLayout {
                      	solicitudNotificacion.setEstado("RECHAZADO");
                         registroRepositorio.save(registro);
                      	solicitudesRepositorio.save(solicitudNotificacion); 
-                     	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
+                     	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getEmpresa().getId(), solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
                      }
                      notificacionesRepositorio.save(notificacion);
                      dialog.close(); 

@@ -49,7 +49,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import com.vaadin.flow.component.dependency.CssImport;
 import modelos.Logs_modificaciones;
+import modelos.Permisos;
 import repositorios.Logs_modificacionesRepositorio;
+import repositorios.PermisosRepositorio;
+
 import com.vaadin.flow.data.renderer.LocalDateTimeRenderer;
 
 @Route("inspector")
@@ -65,11 +68,13 @@ public class InspectorVista extends AppLayout {
     private DatePicker fechaFin;
     private Usuario usuarioActualAux;
     private VerticalLayout contenidoPrincipal;
+    private final PermisosRepositorio permisosRepositorio; 
     
-    public InspectorVista(UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, Logs_modificacionesRepositorio logs_modificacionesRepositorio) {
+    public InspectorVista(PermisosRepositorio permisosRepositorio, UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, Logs_modificacionesRepositorio logs_modificacionesRepositorio) {
         this.registroRepositorio = registroRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
         this.logs_modificacionesRepositorio = logs_modificacionesRepositorio;
+        this.permisosRepositorio = permisosRepositorio;
         
         String nombreUsuario = (String) VaadinSession.getCurrent().getAttribute("username");
         if (nombreUsuario == null) {
@@ -389,7 +394,15 @@ public class InspectorVista extends AppLayout {
     }
 
     private void generarPdf(Grid<Registro> grid) {
+    	LocalDate fechaInicioValor = fechaInicio.getValue() != null ? fechaInicio.getValue() : LocalDate.now();
+        LocalDate fechaFinValor = fechaFin.getValue() != null ? fechaFin.getValue() : LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String fechaInicioFormateada = fechaInicioValor.format(formatter);
+        String fechaFinFormateada = fechaFinValor.format(formatter);
+        
         List<Registro> registros = grid.getListDataView().getItems().collect(Collectors.toList());
+        List<Permisos> permisos = permisosRepositorio.findBySolicitanteIdAndFechaBetweenAndEstado(usuarioActualAux.getId(), fechaInicioValor, fechaFinValor, "ACEPTADO");
+        permisos.sort(Comparator.comparing(Permisos::getFecha));
 
         if (registros.isEmpty()) {
             Notification.show("No hay registros para generar el PDF", 2000, Notification.Position.TOP_CENTER);
@@ -406,41 +419,49 @@ public class InspectorVista extends AppLayout {
         Paragraph titulo = new Paragraph("FichaWeb").setFontSize(28) .setBold(); 
         document.add(titulo);
         
-        Paragraph titulo2 = new Paragraph("Registros de Jornada Laboral").setFontSize(14);
-        document.add(titulo2);
-        
-        if(usuarioActualAux.getId() == -1) {
-        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + ")").setFontSize(12);
-        	document.add(usuarioParrafo);
-        } else {
-        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActualAux.getNombre() + " (" + usuarioActualAux.getEmpresa().getNombreComercial() + ")").setFontSize(12);
-        	document.add(usuarioParrafo);
-        }
-
-        LocalDate fechaInicioValor = fechaInicio.getValue() != null ? fechaInicio.getValue() : LocalDate.now();
-        LocalDate fechaFinValor = fechaFin.getValue() != null ? fechaFin.getValue() : LocalDate.now();
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String fechaInicioFormateada = fechaInicioValor.format(formatter);
-        String fechaFinFormateada = fechaFinValor.format(formatter);
-
         String rangoFechas;
         if (fechaInicioValor.equals(fechaFinValor)) {
-            rangoFechas = "Fecha: " + fechaInicioFormateada;
+            rangoFechas = fechaInicioFormateada;
         } else {
-            rangoFechas = "Fecha: " + fechaInicioFormateada + " - " + fechaFinFormateada;
+            rangoFechas = fechaInicioFormateada + " - " + fechaFinFormateada;
         }
-
-        Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(12);
+        
         if(usuarioActualAux.getId() == -1) {
-        	fechasParrafo.setMarginBottom(15);
-        }
-        document.add(fechasParrafo);
+        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + "), " + rangoFechas).setFontSize(11);
+        	document.add(usuarioParrafo);
+        } else {
+        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActualAux.getNombre() + " (" + usuarioActualAux.getEmpresa().getNombreComercial() + "), " + rangoFechas).setFontSize(11);
+        	document.add(usuarioParrafo);
+        }       
         
         if(usuarioActualAux.getId() != -1) {
-        	Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
+        	Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(11);
             document.add(horasParrafo);
         }
+        
+        if(usuarioActualAux.getId() != -1) {
+	        if (!permisos.isEmpty()) {
+	        	Paragraph tituloPermisos = new Paragraph("Permisos solicitados").setFontSize(12);
+	            document.add(tituloPermisos);
+	        }
+	        for (Permisos permiso : permisos) {
+	        	String motivo = permiso.getMotivo();
+	            Paragraph permisoParrafo;
+	            String fechaFormateada = permiso.getFecha().format(formatter);
+	            if ("Vacaciones".equals(motivo)) {
+	                String fechaAuxFormateada = permiso.getFechaAux().format(formatter);
+	                permisoParrafo = new Paragraph("• " + motivo + ", " + fechaFormateada + " a " + fechaAuxFormateada);
+	            } else {
+	                permisoParrafo = new Paragraph("• " + motivo + ", " + fechaFormateada);
+	            }
+	        	permisoParrafo.setFontSize(11).setMarginLeft(20);
+	            document.add(permisoParrafo);
+	        }
+        }
+        
+        Paragraph tituloRegistros = new Paragraph("Registros de Jornada Laboral").setFontSize(12);
+        tituloRegistros.setMarginBottom(15);
+        document.add(tituloRegistros);
         
         Table table = new Table(6);
         
@@ -521,15 +542,12 @@ public class InspectorVista extends AppLayout {
 
         Paragraph titulo = new Paragraph("FichaWeb").setFontSize(28) .setBold(); 
         document.add(titulo);
-        
-        Paragraph titulo2 = new Paragraph("Registros de Logs").setFontSize(14);
-        document.add(titulo2);
 
         if(usuarioActualAux.getId() == -1) {
-        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + ")").setFontSize(12);
+        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getEmpresa().getNombreComercial() + ")").setFontSize(11);
         	document.add(usuarioParrafo);
         } else {
-        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActualAux.getNombre() + " (" + usuarioActualAux.getEmpresa().getNombreComercial() + ")").setFontSize(12);
+        	Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuarioActualAux.getNombre() + " (" + usuarioActualAux.getEmpresa().getNombreComercial() + ")").setFontSize(11);
         	document.add(usuarioParrafo);
         }
 
@@ -544,8 +562,11 @@ public class InspectorVista extends AppLayout {
             rangoFechas = "Fecha: " + fechaInicioFormateada + " - " + fechaFinFormateada;
         }
 
-        Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(12);
+        Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(11);
         document.add(fechasParrafo);
+        
+        Paragraph titulo2 = new Paragraph("Registros de Logs").setFontSize(12).setMarginBottom(15);
+        document.add(titulo2);
         
         Table table;
         

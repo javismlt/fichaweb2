@@ -218,6 +218,20 @@ public class ListEmpresas extends AppLayout {
                 .set("flex-grow", "1")
                 .set("text-align", "center");
 
+            Image configImagen = new Image("img/ajustes.png", "Ajustes Icono");
+            configImagen.setWidth("25px");
+            configImagen.setHeight("25px");
+            configImagen.getStyle().set("margin-top", "5px");
+            
+            Button btnConfig = new Button("", configImagen, click -> {
+                UI.getCurrent().navigate("configempresa/" + empresa.getId());
+            });
+            btnConfig.getStyle()
+                .set("background-color", "#bfbfbf")
+                .set("color", "white")
+                .set("cursor", "pointer")
+                .set("border", "1px solid black");  
+            
             Button btnModificar = new Button("Modificar", click -> {
                 UI.getCurrent().navigate("modempresa/" + empresa.getId());
             });
@@ -246,7 +260,7 @@ public class ListEmpresas extends AppLayout {
             
             btnActivar.addClickListener(e -> cambiarEstado(empresa, btnActivar));
 
-            HorizontalLayout botones = new HorizontalLayout(btnModificar, btnEliminar, btnActivar);
+            HorizontalLayout botones = new HorizontalLayout(btnConfig, btnModificar, btnEliminar, btnActivar);
             botones.setSpacing(true);
             botones.setAlignItems(Alignment.CENTER);
             botones.getStyle().set("flex-grow", "0");
@@ -398,7 +412,7 @@ public class ListEmpresas extends AppLayout {
                     	Permisos permisoNotificacion = permisoOptional.get();
                     	permisoNotificacion.setEstado("ACEPTADO");
                     	permisosRepositorio.save(permisoNotificacion); 
-                    	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
+                    	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getEmpresa().getId(), permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
                     } else {
                     	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
                     	Solicitudes solicitudNotificacion = solicitudesOptional.get();
@@ -410,7 +424,7 @@ public class ListEmpresas extends AppLayout {
                     	solicitudNotificacion.setEstado("ACEPTADO");
                         registroRepositorio.save(registro);
                     	solicitudesRepositorio.save(solicitudNotificacion); 
-                    	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
+                    	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getEmpresa().getId(), solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
                     }
                     notificacionesRepositorio.save(notificacion);
                     dialog.close(); 
@@ -431,7 +445,7 @@ public class ListEmpresas extends AppLayout {
                      	Permisos permisoNotificacion = permisoOptional.get();
                      	permisoNotificacion.setEstado("RECHAZADO");
                      	permisosRepositorio.save(permisoNotificacion); 
-                     	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
+                     	emailNotificacion.enviarCorreoRespuestaPermiso(permisoNotificacion.getSolicitante().getEmpresa().getId(), permisoNotificacion.getSolicitante().getNombre(), permisoNotificacion.getSolicitante().getEmail(), permisoNotificacion.getMotivo(), permisoNotificacion.getFecha(), permisoNotificacion.getFechaAux(), permisoNotificacion.getEstado());
                      } else {
                      	Optional<Solicitudes> solicitudesOptional = solicitudesRepositorio.findById(notificacion.getidAsociado());
                      	Solicitudes solicitudNotificacion = solicitudesOptional.get();
@@ -440,7 +454,7 @@ public class ListEmpresas extends AppLayout {
                      	solicitudNotificacion.setEstado("RECHAZADO");
                         registroRepositorio.save(registro);
                      	solicitudesRepositorio.save(solicitudNotificacion); 
-                     	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
+                     	emailNotificacion.enviarCorreoRespuestaSolicitud(solicitudNotificacion.getSolicitante().getEmpresa().getId(), solicitudNotificacion.getSolicitante().getNombre(), solicitudNotificacion.getSolicitante().getEmail(), solicitudNotificacion.getRegistro().getFechaRegistro(), solicitudNotificacion.getAccion(), solicitudNotificacion.getValorPrevio(), solicitudNotificacion.getValor(), solicitudNotificacion.getEstado());
                      }
                      notificacionesRepositorio.save(notificacion);
                      dialog.close(); 

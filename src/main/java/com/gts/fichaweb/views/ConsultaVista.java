@@ -557,8 +557,17 @@ public class ConsultaVista extends AppLayout {
     }
 
     private void generarPdf(Grid<Registro> grid) {
+    	Usuario usuario = (usuarioActualAux != null) ? usuarioActualAux : usuarioActual;
+    	LocalDate fechaInicioValor = fechaInicio.getValue() != null ? fechaInicio.getValue() : LocalDate.now();
+        LocalDate fechaFinValor = fechaFin.getValue() != null ? fechaFin.getValue() : LocalDate.now();
+    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String fechaInicioFormateada = fechaInicioValor.format(formatter);
+        String fechaFinFormateada = fechaFinValor.format(formatter);
+        
         List<Registro> registros = grid.getListDataView().getItems().collect(Collectors.toList());
-
+        List<Permisos> permisos = permisosRepositorio.findBySolicitanteIdAndFechaBetweenAndEstado(usuario.getId(), fechaInicioValor, fechaFinValor, "ACEPTADO");
+        permisos.sort(Comparator.comparing(Permisos::getFecha));
+        
         if (registros.isEmpty()) {
             Notification.show("No hay registros para generar el PDF", 2000, Notification.Position.TOP_CENTER);
             return;
@@ -573,33 +582,37 @@ public class ConsultaVista extends AppLayout {
 
         Paragraph titulo = new Paragraph("FichaWeb").setFontSize(28) .setBold(); 
         document.add(titulo);
-        
-        Paragraph titulo2 = new Paragraph("Registros de Jornada Laboral").setFontSize(14);
-        document.add(titulo2);
 
-        Usuario usuario = (usuarioActualAux != null) ? usuarioActualAux : usuarioActual;
-        Paragraph usuarioParrafo = new Paragraph("Usuario: " + usuario.getNombre() + " (" + usuario.getEmpresa().getNombreComercial() + ")").setFontSize(12);
+        Paragraph usuarioParrafo;
+        if (fechaInicioValor.equals(fechaFinValor)) {
+            usuarioParrafo = new Paragraph("Usuario: " + usuario.getNombre() + " (" + usuario.getEmpresa().getNombreComercial() + "), " + fechaInicioFormateada).setFontSize(11);
+        } else {
+            usuarioParrafo = new Paragraph("Usuario: " + usuario.getNombre() + " (" + usuario.getEmpresa().getNombreComercial() + "), " + fechaInicioFormateada + " - " + fechaFinFormateada).setFontSize(11);
+        }
         document.add(usuarioParrafo);
 
-        LocalDate fechaInicioValor = fechaInicio.getValue() != null ? fechaInicio.getValue() : LocalDate.now();
-        LocalDate fechaFinValor = fechaFin.getValue() != null ? fechaFin.getValue() : LocalDate.now();
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String fechaInicioFormateada = fechaInicioValor.format(formatter);
-        String fechaFinFormateada = fechaFinValor.format(formatter);
-
-        String rangoFechas;
-        if (fechaInicioValor.equals(fechaFinValor)) {
-            rangoFechas = "Fecha: " + fechaInicioFormateada;
-        } else {
-            rangoFechas = "Fecha: " + fechaInicioFormateada + " - " + fechaFinFormateada;
-        }
-
-        Paragraph fechasParrafo = new Paragraph(rangoFechas).setFontSize(12);
-        document.add(fechasParrafo);
-
-        Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(12).setMarginBottom(15);
+        Paragraph horasParrafo = new Paragraph("Total trabajado: " + horasTrabajadas + " horas").setFontSize(11);
         document.add(horasParrafo);
+        
+        if (!permisos.isEmpty()) {
+        	Paragraph tituloPermisos = new Paragraph("Permisos solicitados").setFontSize(12);
+            document.add(tituloPermisos);
+        }
+        for (Permisos permiso : permisos) {
+        	String motivo = permiso.getMotivo();
+            Paragraph permisoParrafo;
+        	if("Vacaciones".equals(motivo)) {
+        		permisoParrafo = new Paragraph("• " + motivo + ", " + permiso.getFecha() + " a " + permiso.getFechaAux());
+        	} else {
+        		permisoParrafo = new Paragraph("• " + motivo + ", " + permiso.getFecha());
+        	}
+        	permisoParrafo.setFontSize(11).setMarginLeft(20);
+            document.add(permisoParrafo);
+        }
+        
+        Paragraph tituloRegistros = new Paragraph("Registros de Jornada Laboral").setFontSize(12);
+        tituloRegistros.setMarginBottom(15);
+        document.add(tituloRegistros);
         
         Table table = new Table(6);
         table.addHeaderCell(new Cell().add(new Paragraph("FECHA")));
@@ -747,7 +760,7 @@ public class ConsultaVista extends AppLayout {
         
         solicitudesRepositorio.save(registroSolicitud);
         registroNotificacion(registroSolicitud);
-        emailNotificacion.enviarCorreoSolicitud(Supervisor.getEmail(), usuario.getNombre(), "modificacion", accion, valorNuevo, registro.getHora(), registro.getFechaRegistro()); 
+        emailNotificacion.enviarCorreoSolicitud(Supervisor.getEmpresa().getId(), Supervisor.getEmail(), usuario.getNombre(), "modificacion", accion, valorNuevo, registro.getHora(), registro.getFechaRegistro()); 
         actualizarGrid(fechaInicio.getValue(), fechaFin.getValue());
         return true;
     }

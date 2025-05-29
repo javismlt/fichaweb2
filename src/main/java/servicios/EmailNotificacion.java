@@ -6,26 +6,35 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import java.time.LocalTime;
 import java.time.LocalDate;
+import servicios.EmailConfigServicio;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 @Service
 public class EmailNotificacion {
 
-    @Autowired
-    private JavaMailSender mailSender;
+	private final EmailConfigServicio emailConfigServicio;
 
-    public void enviarCorreoSolicitud(String solicitado, String solicitante, String tipo, String accion, String valorNuevo, LocalTime valorPrevio , LocalDate fecha) {
-        String body = "El usuario " + solicitante + ", ha solicitado la " + tipo + " del registro con fecha " + fecha + " y accion " + accion + ", cambio de hora " + valorPrevio + " a " + valorNuevo + ".";
+    public EmailNotificacion(EmailConfigServicio emailConfigService) {
+        this.emailConfigServicio = emailConfigService;
+    }
+
+    public void enviarCorreoSolicitud(Integer empresaId, String solicitado, String solicitante, String tipo, String accion, String valorNuevo, LocalTime valorPrevio , LocalDate fecha) {
+    	JavaMailSenderImpl mailSender = emailConfigServicio.getMailSenderByEmpresaId(empresaId);
+    	
+    	String body = "El usuario " + solicitante + ", ha solicitado la " + tipo + " del registro con fecha " + fecha + " y accion " + accion + ", cambio de hora " + valorPrevio + " a " + valorNuevo + ".";
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(solicitado);
         message.setSubject("Solicitud de " + tipo + ", " + solicitante);
         message.setText(body);
-        message.setFrom("demo@gtssl.com"); 
+        message.setFrom(mailSender.getUsername());
         mailSender.send(message);
     }
     
-    public void enviarCorreoPermiso(String solicitado, String solicitante, String tipo, LocalDate fecha, LocalDate fechaAux) {
-        String body;
+    public void enviarCorreoPermiso(Integer empresaId, String solicitado, String solicitante, String tipo, LocalDate fecha, LocalDate fechaAux) {
+    	JavaMailSenderImpl mailSender = emailConfigServicio.getMailSenderByEmpresaId(empresaId);
+    	
+    	String body;
         if(fechaAux == null) {
         	body = "El usuario " + solicitante + " ha solicitado el permiso de " + tipo + " para la fecha " + fecha + ".";
         } else {
@@ -36,11 +45,13 @@ public class EmailNotificacion {
         message.setTo(solicitado);
         message.setSubject("Permiso de " + tipo + ", " + solicitante);
         message.setText(body);
-        message.setFrom("demo@gtssl.com"); 
+        message.setFrom(mailSender.getUsername()); 
         mailSender.send(message);
     }
-
-    public void enviarCorreoRespuestaSolicitud(String nombre, String solicitante, LocalDate fecha, String accion, String previoValor, String nuevoValor, String Estado) {
+    
+    public void enviarCorreoRespuestaSolicitud(Integer empresaId, String nombre, String solicitante, LocalDate fecha, String accion, String previoValor, String nuevoValor, String Estado) {
+    	JavaMailSenderImpl mailSender = emailConfigServicio.getMailSenderByEmpresaId(empresaId);
+    	
     	String body = "Su solicitud de modificación de registro con fecha " + fecha + " y acción " + accion + " ha sido " + Estado + ".";
         if(Estado == "ACEPTADO") {
         	body += " Modificación de hora " + previoValor + " a " + nuevoValor + ".";
@@ -49,12 +60,14 @@ public class EmailNotificacion {
         message.setTo(solicitante);
         message.setSubject("Resolución solicitud de modificación " + fecha + ", " + nombre);
         message.setText(body);
-        message.setFrom("demo@gtssl.com"); 
+        message.setFrom(mailSender.getUsername()); 
         mailSender.send(message);
     }
     
-    public void enviarCorreoRespuestaPermiso(String nombre, String solicitante, String motivo, LocalDate fecha, LocalDate fechaAux, String Estado) {
-        String body;
+    public void enviarCorreoRespuestaPermiso(Integer empresaId, String nombre, String solicitante, String motivo, LocalDate fecha, LocalDate fechaAux, String Estado) {
+    	JavaMailSenderImpl mailSender = emailConfigServicio.getMailSenderByEmpresaId(empresaId);
+    	
+    	String body;
         if(fechaAux == null) {
         	body = "Su solicitud de permiso con motivo " + motivo + " en la fecha " + fecha + " ha sido " + Estado + ".";
         } else {
@@ -65,7 +78,7 @@ public class EmailNotificacion {
         message.setTo(solicitante);
         message.setSubject("Resolución solicitud de permiso " + motivo + ", " + nombre);
         message.setText(body);
-        message.setFrom("demo@gtssl.com"); 
+        message.setFrom(mailSender.getUsername()); 
         mailSender.send(message);
     }
 }
