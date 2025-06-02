@@ -39,6 +39,7 @@ import com.vaadin.flow.component.html.Div;
 import java.util.Optional;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalTime;
+import java.util.Arrays;
 
 @Route("listusuarios")
 @CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
@@ -145,6 +146,7 @@ public class ListUsuarios extends AppLayout {
             mobileBadge.getStyle().set("background-color", "red").set("color", "white").set("border-radius", "50%").set("width", "16px").set("height", "16px").set("font-size", "12px").set("position", "absolute").set("top", "-5px").set("right", "-5px").set("display", "flex").set("align-items", "center").set("justify-content", "center");
             menuUserWrapper.add(mobileBadge);
         }
+        
         ContextMenu contextMenu = new ContextMenu(menuUser);
         contextMenu.setOpenOnClick(true);
         contextMenu.addItem("Notificaciones (" + notificacionesPendientes + ")", e -> mostrarDialogoNotificaciones());
@@ -253,13 +255,28 @@ public class ListUsuarios extends AppLayout {
     private void mostrarListaUsuarios(VerticalLayout listaUsuarios, List<Usuario> usuarios) {
         listaUsuarios.removeAll();
 
+        usuarios.sort((u1, u2) -> {
+            List<Integer> rolesPrioritarios = Arrays.asList(2, 3, 5);
+            boolean u1EsPrioritario = rolesPrioritarios.contains(u1.getRol());
+            boolean u2EsPrioritario = rolesPrioritarios.contains(u2.getRol());
+
+            if (u1EsPrioritario && !u2EsPrioritario) {
+                return -1;
+            } else if (!u1EsPrioritario && u2EsPrioritario) {
+                return 1;
+            } else {
+                return 0;
+            }
+        });
+        
         for (Usuario u : usuarios) {
             String textoUsuario = u.getNombre();
             Span infoUsuario = new Span(textoUsuario);
             infoUsuario.getStyle()
-                .set("font-size", "16px")
-                .set("flex-grow", "1")
-                .set("text-align", "center");
+            	.set("font-size", "16px")
+            	.set("flex-grow", "1")
+            	.set("text-align", "left")
+            	.set("width", "100%");
 
             Button btnModificar = new Button("Modificar", e -> {
                 UI.getCurrent().navigate("modusuario/" + u.getId());
@@ -278,7 +295,7 @@ public class ListUsuarios extends AppLayout {
                 .set("color", "white")
                 .set("cursor", "pointer")
                 .set("border", "none");
-
+            
             Button btnActivar = new Button(u.getActivo() == 1 ? "Activo" : "Activar");
             btnActivar.setWidth("90px");
             btnActivar.getStyle()
@@ -289,10 +306,17 @@ public class ListUsuarios extends AppLayout {
 
             btnActivar.addClickListener(e -> cambiarEstado(u, btnActivar));
 
-            HorizontalLayout botones = new HorizontalLayout(btnModificar, btnEliminar, btnActivar);
+            HorizontalLayout botones = new HorizontalLayout();
             botones.setSpacing(true);
             botones.setAlignItems(Alignment.CENTER);
             botones.getStyle().set("flex-grow", "0");
+            botones.setJustifyContentMode(JustifyContentMode.END);
+
+            if ((usuarioActual.getRol() == 1 || usuarioActual.getRol() == 2) && !usuarioActual.getId().equals(u.getId())) {
+            	    botones.add(btnEliminar);
+            }
+            botones.add(btnModificar);
+            botones.add(btnActivar);
 
             HorizontalLayout filaUsuario = new HorizontalLayout(infoUsuario, botones);
             filaUsuario.setWidthFull();
