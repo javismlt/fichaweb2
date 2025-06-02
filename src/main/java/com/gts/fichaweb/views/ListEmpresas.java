@@ -184,7 +184,7 @@ public class ListEmpresas extends AppLayout {
         botonEmpresa.addClickListener(e -> {
             UI.getCurrent().navigate("addempresa");
         });
-        botonEmpresa.getStyle().set("font-size", "12px").set("margin-left", "10px").set("margin-top", "20px").set("background-color", "green").set("color", "white").set("cursor", "pointer").set("border", "none");
+        botonEmpresa.getStyle().set("font-size", "12px").set("margin-left", "10px").set("margin-top", "15px").set("background-color", "green").set("color", "white").set("cursor", "pointer").set("border", "none");
         
         botonEmpresa.setVisible(usuarioActual.getRol() == 1);
         

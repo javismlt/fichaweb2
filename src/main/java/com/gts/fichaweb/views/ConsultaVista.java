@@ -129,7 +129,6 @@ public class ConsultaVista extends AppLayout {
         menuResponsive.setOpenOnClick(true);
         menuResponsive.addItem("Registro", e -> UI.getCurrent().navigate("registro"));
         menuResponsive.addItem("Consulta", e -> UI.getCurrent().navigate("consulta"));
-        menuResponsive.addItem("Permisos", e -> UI.getCurrent().navigate("permisos"));
         MenuItem itemPermisos = menuResponsive.addItem("Permisos", e -> UI.getCurrent().navigate("permisos"));
         if (usuarioActual != null && usuarioActual.getRol() == 3) {
             itemPermisos.setVisible(false);

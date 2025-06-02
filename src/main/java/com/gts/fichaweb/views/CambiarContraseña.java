@@ -1,5 +1,6 @@
 package com.gts.fichaweb.views;
 
+import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H1;
@@ -106,7 +107,8 @@ public class CambiarContraseña extends AppLayout implements BeforeEnterObserver
         
         btnconfirmar.setWidth("300px");
         btnconfirmar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
-
+        btnconfirmar.addClickShortcut(Key.ENTER);
+        
         Image logo = new Image("img/icono.png", "Logo");
         logo.setWidth("60px");
         logo.setHeight("60px");

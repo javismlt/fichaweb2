@@ -90,4 +90,29 @@
 	.mobile-badge {
 	    display: inline-flex !important;
 	}
+	
+	.form-columns {
+	    flex-direction: column;
+	    align-items: center;
+		gap: 0;
+	}
+
+	.form-columns > * {
+	    width: 90% !important;
+		padding: 10px !important;
+	}
+	
+	.calendar-grid {
+	    display: flex !important;
+	    flex-direction: column !important;
+	    gap: 10px !important;
+	    width: 100% !important;
+	}
+	.calendar-grid > div {
+	    width: 100% !important;
+	}
+
+	.cabecera-dias {
+	    display: none !important; 
+	}
 }

@@ -8,7 +8,5 @@ import java.util.Optional;
 @Repository
 public interface EmpresaRepositorio extends JpaRepository<Empresa, Integer> {
 	 Optional<Empresa> findByNombreComercial(String nombreComercial); 
-	 Optional<Empresa> findTopByOrderByIdDesc();
-	 Optional<Empresa> findByCodGtserp(Integer codGtserp); 
-	 boolean existsByCodGtserpAndGrupoGtserpAndEmpresaGtserp(int codGtserp, int grupoGtserp, int empresaGtserp);
+	 Optional<Empresa> findTopByOrderByIdDesc(); 
 }

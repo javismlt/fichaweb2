@@ -15,6 +15,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
@@ -183,7 +184,7 @@ public class AddEmpresa extends AppLayout{
 	
 	private void crearFormulario() {
 	    H2 titulo = new H2("Añadir Empresa");
-	    titulo.getStyle().set("text-align", "center");
+	    titulo.getStyle().set("text-align", "center").set("margin-bottom", "10px");
 
 	    TextField campo1 = new TextField("Nombre Comercial *");
 	    TextField campo2 = new TextField("Razón Social *");
@@ -195,27 +196,24 @@ public class AddEmpresa extends AppLayout{
 	    TextField campo8 = new TextField("Teléfono *");
 	    TextField campo9 = new TextField("Correo Electrónico *");
 	    TextField campo10 = new TextField("Máximo Empleados *");
-	    TextField campo11 = new TextField("Código GTSERP *");
-	    TextField campo12 = new TextField("Grupo GTSERP *");
-	    TextField campo13 = new TextField("Empresa GTSERP *");
 
-	    Select<String> campo14 = new Select<>();
-	    campo14.setLabel("Multiusuario *");
-	    campo14.setItems("Activar", "Desactivar");
+	    Select<String> campo11 = new Select<>();
+	    campo11.setLabel("Multiusuario *");
+	    campo11.setItems("Activar", "Desactivar");
 	    
-	    Select<String> campo15 = new Select<>();
-	    campo15.setLabel("Inspector *");
-	    campo15.setItems("Activar", "Desactivar");
+	    Select<String> campo12 = new Select<>();
+	    campo12.setLabel("Inspector *");
+	    campo12.setItems("Activar", "Desactivar");
 	    
-	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12, campo13, campo14, campo15).forEach(tf -> tf.setWidth("300px"));
+	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12).forEach(tf -> tf.setWidth("300px"));
 
 	    Button btnGuardar = new Button("Guardar");
 	    btnGuardar.setWidth("100px");
 	    btnGuardar.setHeight("40px");
-	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("text-align", "center").set("margin-top", "35px").set("margin-left", "100px");
+	    btnGuardar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("text-align", "center").set("margin-top", "30px");
 
 	    btnGuardar.addClickListener(e -> {
-	        boolean guardado = registrarEmpresa(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue(), campo15.getValue());
+	        boolean guardado = registrarEmpresa(campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue());
 	        if (guardado && ultimaEmpresaCreada != null) {
 	        	Roles rolSupervisor = rolesRepositorio.findById(2).orElseThrow(); 
 	        	Usuario supervisor = usuarioRepositorio.findByRolAndEmpresa_Id(rolSupervisor, ultimaEmpresaCreada.getId());
@@ -223,8 +221,8 @@ public class AddEmpresa extends AppLayout{
 	        }
 	    });
 	    
-	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8);
-	    VerticalLayout columnaDerecha = new VerticalLayout(campo9, campo10, campo11, campo12, campo13, campo14, campo15, btnGuardar);
+	    VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
+	    VerticalLayout columnaDerecha = new VerticalLayout(campo7, campo8, campo9, campo10, campo11, campo12);
 	    
 	    columnaIzquierda.setWidth("45%");
 	    columnaDerecha.setWidth("45%");
@@ -232,8 +230,9 @@ public class AddEmpresa extends AppLayout{
 	    HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
 	    columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 	    columnasLayout.setAlignItems(Alignment.START);
+	    columnasLayout.addClassName("form-columns");
 
-	    VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout);
+	    VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout, btnGuardar);
 	    layoutFormulario.setAlignItems(Alignment.CENTER);
 	    layoutFormulario.setWidthFull();
 	    layoutFormulario.getStyle().set("padding", "20px");
@@ -242,16 +241,8 @@ public class AddEmpresa extends AppLayout{
 	}
 	
 	
-	private boolean registrarEmpresa(String nombreComercial, String razonSocial, String direccion, String codPostal, String pais, String provincia, String poblacion, String telefono, String email, String empleados,String codGtserp, String grupoGtserp, String empresaGtserp, String multiusuario, String inspector) {
-	    int codigo_gtserp = Integer.parseInt(codGtserp);
-	    int grupo_gtserp = Integer.parseInt(grupoGtserp);
-	    int empresa_gtserp = Integer.parseInt(empresaGtserp);
-
-	    if (empresaRepositorio.existsByCodGtserpAndGrupoGtserpAndEmpresaGtserp(codigo_gtserp, grupo_gtserp, empresa_gtserp)) {
-	        Notification.show("Ya existe una empresa con este Código, Grupo y Empresa GTSERP. Por favor, introduce una combinación diferente.", 2000, Notification.Position.TOP_CENTER);
-	        return false;
-	    }
-
+	private boolean registrarEmpresa(String nombreComercial, String razonSocial, String direccion, String codPostal, String pais, String provincia, String poblacion, String telefono, String email, String empleados, String multiusuario, String inspector) {
+	   
 	    Empresa empresa = new Empresa();
 	    empresa.setNombreComercial(nombreComercial);
 	    empresa.setRazonSocial(razonSocial);
@@ -263,9 +254,6 @@ public class AddEmpresa extends AppLayout{
 	    empresa.setTelefono(telefono);
 	    empresa.setEmail(email);
 	    empresa.setMaxEmpleados(Integer.parseInt(empleados));
-	    empresa.setEmpresaGtserp(empresa_gtserp);  
-	    empresa.setCodGtserp(codigo_gtserp);  
-	    empresa.setGrupoGtserp(grupo_gtserp);  
 	    empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);  
 	    empresa.setInspector("Activar".equals(inspector) ? 1 : 0);  
 	    

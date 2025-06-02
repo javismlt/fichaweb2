@@ -36,16 +36,7 @@ public class Empresa {
     
     @Column(name = "email", nullable = false, length = 255)
     private String email;
-    
-    @Column(name = "cod_gtserp", nullable = false)
-    private Integer codGtserp;
-    
-    @Column(name = "grupo_gtserp", nullable = false)
-    private Integer grupoGtserp;
-    
-    @Column(name = "empresa_gtserp", nullable = false)
-    private Integer empresaGtserp;
-    
+
     @Column(name = "multiusuario", nullable = false)
     private Integer multiusuario = 0;
     
@@ -137,30 +128,6 @@ public class Empresa {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public Integer getCodGtserp() {
-        return codGtserp;
-    }
-
-    public void setCodGtserp(Integer codGtserp) {
-        this.codGtserp = codGtserp;
-    }
-    
-    public Integer getGrupoGtserp() {
-        return empresaGtserp;
-    }
-
-    public void setGrupoGtserp(Integer grupoGtserp) {
-        this.grupoGtserp = grupoGtserp;
-    }
-
-    public Integer getEmpresaGtserp() {
-        return empresaGtserp;
-    }
-
-    public void setEmpresaGtserp(Integer empresaGtserp) {
-        this.empresaGtserp = empresaGtserp;
     }
 
     public Integer getMultiusuario() {

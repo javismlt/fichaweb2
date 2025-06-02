@@ -223,7 +223,8 @@ public class PermisosVista extends AppLayout {
         Div cabeceraDias = new Div();
         cabeceraDias.getStyle().set("display", "grid").set("grid-template-columns", "repeat(7, 120px)").set("gap", "5px").set("text-align", "center");
         cabeceraDias.setWidth("840px");
-
+        cabeceraDias.addClassName("cabecera-dias");
+        
         for (DayOfWeek day : DayOfWeek.values()) {
             Span label = new Span(day.getDisplayName(TextStyle.SHORT, new Locale("es")));
             label.getStyle().set("font-weight", "bold").set("display", "flex").set("align-items", "center").set("justify-content", "center").set("height", "30px");
@@ -233,7 +234,8 @@ public class PermisosVista extends AppLayout {
         Div calendarGrid = new Div();
         calendarGrid.getStyle().set("display", "grid").set("grid-template-columns", "repeat(7, 120px)").set("grid-auto-rows", "120px").set("gap", "5px");
         calendarGrid.setWidth("840px");
-
+        calendarGrid.addClassName("calendar-grid");
+        
         LocalDate firstDay = mes.atDay(1);
         int offset = firstDay.getDayOfWeek().getValue() - 1;
         LocalDate inicioDia = firstDay.minusDays(offset);

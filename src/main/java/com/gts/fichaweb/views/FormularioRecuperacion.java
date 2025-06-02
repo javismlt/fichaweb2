@@ -1,5 +1,6 @@
 package com.gts.fichaweb.views;
 
+import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
@@ -45,17 +46,18 @@ public class FormularioRecuperacion extends VerticalLayout {
         HorizontalLayout headerLayout = new HorizontalLayout(logo, titulo);
         headerLayout.setAlignItems(Alignment.CENTER);
 
-        TextField emailField = new TextField("Correo Electrónico");
-        emailField.setWidth("300px");
+        TextField userField = new TextField("Login Usuario");
+        userField.setWidth("300px");
 
         Button btnRecuperar = new Button("Enviar");
         btnRecuperar.setWidth("300px");
         btnRecuperar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer");
+        btnRecuperar.addClickShortcut(Key.ENTER);
         
         Anchor linkRetroceder = new Anchor("", "Volver");
         linkRetroceder.getStyle().set("font-size", "14px").set("color", "#007BFF").set("cursor", "pointer");
 
-        VerticalLayout formLayout = new VerticalLayout(headerLayout, emailField, btnRecuperar, linkRetroceder);
+        VerticalLayout formLayout = new VerticalLayout(headerLayout, userField, btnRecuperar, linkRetroceder);
         formLayout.setAlignItems(Alignment.CENTER);
         formLayout.setSpacing(true);
 
@@ -65,9 +67,9 @@ public class FormularioRecuperacion extends VerticalLayout {
         add(formLayout);
 
         btnRecuperar.addClickListener(event -> {
-            String email = emailField.getValue().trim();
-            if (!email.isEmpty()) {
-            	crearToken(email);
+            String user = userField.getValue().trim();
+            if (!user.isEmpty()) {
+            	crearToken(user);
                 btnRecuperar.setText("Enviado ✔");
                 btnRecuperar.setEnabled(false);
             }
@@ -75,20 +77,20 @@ public class FormularioRecuperacion extends VerticalLayout {
     }
 
     
-    private void crearToken(String email) {
-        Optional<Usuario> usuario = usuarioRepositorio.findByEmail(email);
-        if (usuario.isEmpty()) return;
+    private void crearToken(String loginUser) {
+        Usuario usuario = usuarioRepositorio.findByLoginUsuario(loginUser);
+        if (usuario == null) return;
 
         String token = generarToken(); 
         LocalDateTime tiempo = LocalDateTime.now().plusMinutes(30);
 
         PasswordToken pt = new PasswordToken();
         pt.setToken(token);
-        pt.setEmail(email);
+        pt.setEmail(usuario.getEmail());
         pt.setExpiration(tiempo);
 
         passwordTokenRepo.save(pt);
-        emailServicio.enviarCorreo(email, token);  
+        emailServicio.enviarCorreo(usuario.getEmpresa().getId(), usuario.getEmail(), token);  
     }
 
     private String generarToken() {

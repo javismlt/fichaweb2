@@ -181,7 +181,7 @@ public class ListUsuarios extends AppLayout {
         botonUsuario.addClickListener(e -> {
             UI.getCurrent().navigate("addusuario");
         });
-        botonUsuario.getStyle().set("font-size", "12px").set("margin-left", "10px").set("margin-top", "20px").set("background-color", "green").set("color", "white").set("cursor", "pointer").set("border", "none");
+        botonUsuario.getStyle().set("font-size", "12px").set("margin-left", "10px").set("margin-top", "15px").set("background-color", "green").set("color", "white").set("cursor", "pointer").set("border", "none");
         
         int cantidadUsuarios = usuarioRepositorio.countByEmpresaIdAndActivo(usuarioActual.getEmpresa().getId(), 1);
         int maxEmpleados = usuarioActual.getEmpresa().getMaxEmpleados();

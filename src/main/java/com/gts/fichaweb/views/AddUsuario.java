@@ -224,7 +224,7 @@ public class AddUsuario extends AppLayout{
 		tituloConBoton.setAlignItems(Alignment.CENTER);
 		tituloConBoton.setJustifyContentMode(JustifyContentMode.CENTER);
 		tituloConBoton.setWidthFull();
-		tituloConBoton.getStyle().set("margin-bottom", "20px");
+		tituloConBoton.getStyle().set("margin-bottom", "10px");
 
 	    TextField campo1 = new TextField("Nombre *");
 	    TextField campo2 = new TextField("Teléfono");
@@ -305,6 +305,7 @@ public class AddUsuario extends AppLayout{
 	    HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
 	    columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 	    columnasLayout.setAlignItems(Alignment.START);
+	    columnasLayout.addClassName("form-columns");
 
 	    VerticalLayout layoutFormulario = new VerticalLayout(tituloConBoton, columnasLayout, upload, enlaceCSV);
 	    layoutFormulario.setAlignItems(Alignment.CENTER);

@@ -200,6 +200,9 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
     }	
 
     private void cargarDatosFormulario() {
+    	H2 titulo = new H2("Modificar Usuario");
+        titulo.getStyle().set("text-align", "center").set("margin-bottom", "10px");
+        
         if (usuarioActual == null) {
             Notification.show("Error: Usuario no encontrado", 3000, Notification.Position.TOP_CENTER);
             return;
@@ -233,7 +236,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
 
         Select<String> campo9 = new Select<>();
         campo9.setLabel("Rol *");
-        campo9.setItems("Trabajador");
+        campo9.setItems(getRol(usuarioActual.getRol()));
         campo9.setValue(getRol(usuarioActual.getRol()));
 
         Select<String> campo10 = new Select<>();
@@ -279,11 +282,11 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         
         if (usuarioActual.getRol() == 3 || usuarioActual.getRol() == 5) {
         	campo5.setReadOnly(true);
-        	btnActualizar.getStyle().set("margin-top", "35px").set("margin-left", "0");
+        	btnActualizar.getStyle().set("margin-top", "30px").set("margin-left", "0");
             VerticalLayout columna = new VerticalLayout(campo5, campo6, btnActualizar);
             columna.setAlignItems(Alignment.CENTER);
 
-            VerticalLayout layoutFormulario = new VerticalLayout(new H2("Modificar Usuario"), columna);
+            VerticalLayout layoutFormulario = new VerticalLayout(titulo, columna);
             layoutFormulario.setAlignItems(Alignment.CENTER);
             layoutFormulario.setWidthFull();
             layoutFormulario.getStyle().set("padding", "20px");
@@ -296,7 +299,7 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
             VerticalLayout columna= new VerticalLayout(campo5, campo6, campo3, btnActualizar);
             columna.setAlignItems(Alignment.CENTER);
             
-            VerticalLayout layoutFormulario = new VerticalLayout(new H2("Modificar Usuario"), columna);
+            VerticalLayout layoutFormulario = new VerticalLayout(titulo, columna);
             layoutFormulario.setAlignItems(Alignment.CENTER);
             layoutFormulario.setWidthFull();
             layoutFormulario.getStyle().set("padding", "20px");
@@ -314,8 +317,9 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
         HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
         columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
         columnasLayout.setAlignItems(Alignment.START);
+        columnasLayout.addClassName("form-columns");
 
-        VerticalLayout layoutFormulario = new VerticalLayout(new H2("Modificar Usuario"), columnasLayout);
+        VerticalLayout layoutFormulario = new VerticalLayout(titulo, columnasLayout);
         layoutFormulario.setAlignItems(Alignment.CENTER);
         layoutFormulario.setWidthFull();
         layoutFormulario.getStyle().set("padding", "20px");

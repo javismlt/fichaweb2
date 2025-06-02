@@ -11,7 +11,6 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 @Service
 public class EmailNotificacion {
-
 	private final EmailConfigServicio emailConfigServicio;
 
     public EmailNotificacion(EmailConfigServicio emailConfigService) {
@@ -21,7 +20,7 @@ public class EmailNotificacion {
     public void enviarCorreoSolicitud(Integer empresaId, String solicitado, String solicitante, String tipo, String accion, String valorNuevo, LocalTime valorPrevio , LocalDate fecha) {
     	JavaMailSenderImpl mailSender = emailConfigServicio.getMailSenderByEmpresaId(empresaId);
     	
-    	String body = "El usuario " + solicitante + ", ha solicitado la " + tipo + " del registro con fecha " + fecha + " y accion " + accion + ", cambio de hora " + valorPrevio + " a " + valorNuevo + ".";
+    	String body = "El usuario " + solicitante + ", ha solicitado la " + tipo + " del registro con fecha " + fecha + " y acción " + accion + ", cambio de hora " + valorPrevio + " a " + valorNuevo + ".";
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(solicitado);

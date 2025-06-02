@@ -8,12 +8,10 @@ import repositorios.UsuarioRepositorio;
 import repositorios.EmpresaRepositorio;
 import modelos.Empresa;
 import modelos.Usuario;
-
 import java.util.List;
 
 @Service
 public class EmpresaServicio {
-
     private final UsuarioRepositorio usuarioRepositorio;
     private final RegistroRepositorio registroRepositorio;
     private final EmpresaRepositorio empresaRepositorio;

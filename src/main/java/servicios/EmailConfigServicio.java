@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class EmailConfigServicio {
-
     private final ConfigEmpresasRepositorio configEmpresasRepositorio;
     
     @Value("${MAIL_HOST}")

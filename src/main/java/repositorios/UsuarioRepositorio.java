@@ -10,8 +10,8 @@ import modelos.Roles;
 @Repository
 public interface UsuarioRepositorio extends JpaRepository<Usuario, Integer> {
 	Usuario findByLoginUsuario(String loginUsuario);
-	Usuario findByEmpresaIdAndRolId(Integer empresaId, int rolId);
 	Optional<Usuario> findByEmail(String email);
+	Usuario findByEmpresaIdAndRolId(Integer empresaId, int rolId);
 	List<Usuario> findByEmpresaId(Integer empresaId);
 	void deleteByEmpresaId(Integer empresaId);
 	boolean existsByCodPersonalAndEmpresa_Id(int codPersonal, int empresaId);

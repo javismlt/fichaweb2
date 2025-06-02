@@ -41,6 +41,7 @@ public class Registro {
 	@Column(name = "activo", nullable = false)
     private Integer activo = 1;
 	
+	
 	public Integer getId() {
 		return id;
 	}

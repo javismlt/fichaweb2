@@ -9,6 +9,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
@@ -28,6 +29,8 @@ import modelos.Permisos;
 import modelos.Registro;
 import modelos.Solicitudes;
 import modelos.Usuario;
+import modelos.CustomFields;
+import repositorios.CustomFieldsRepositorio;
 import repositorios.EmpresaRepositorio;
 import repositorios.UsuarioRepositorio;
 import servicios.EmailNotificacion;
@@ -46,6 +49,14 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+import com.vaadin.flow.component.Component;
+import java.util.Map;
+import java.util.HashMap;
+import com.vaadin.flow.server.Command;
+import com.vaadin.flow.component.ClientCallable;
 
 @Route("modempresa/:id") 
 @CssImport(value = "./themes/my-theme/styles.css", themeFor = "vaadin-grid") 
@@ -60,8 +71,10 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
     private final SolicitudesRepositorio solicitudesRepositorio; 
     private final RegistroRepositorio registroRepositorio; 
     private final EmailNotificacion emailNotificacion;
+    private final CustomFieldsRepositorio customFieldsRepositorio;
+    private boolean esMovil = false;
     
-    public ModEmpresa(EmpresaRepositorio empresaRepositorio, UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, NotificacionesRepositorio notificacionesRepositorio, PermisosRepositorio permisosRepositorio, SolicitudesRepositorio solicitudesRepositorio, EmailNotificacion emailNotificacion) {
+    public ModEmpresa(CustomFieldsRepositorio customFieldsRepositorio, EmpresaRepositorio empresaRepositorio, UsuarioRepositorio usuarioRepositorio, RegistroRepositorio registroRepositorio, NotificacionesRepositorio notificacionesRepositorio, PermisosRepositorio permisosRepositorio, SolicitudesRepositorio solicitudesRepositorio, EmailNotificacion emailNotificacion) {
         this.empresaRepositorio = empresaRepositorio;
         this.usuarioRepositorio = usuarioRepositorio;
         this.notificacionesRepositorio = notificacionesRepositorio;
@@ -69,6 +82,17 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         this.solicitudesRepositorio = solicitudesRepositorio;
         this.registroRepositorio = registroRepositorio;
         this.emailNotificacion = emailNotificacion;
+        this.customFieldsRepositorio = customFieldsRepositorio;
+        UI.getCurrent().getPage().executeJs("""
+                const esMovil = window.innerWidth < 767;
+                $0.$server.setEsMovil(esMovil);
+            """, getElement());
+    }
+
+    @ClientCallable
+    public void setEsMovil(boolean esMovil) {
+        this.esMovil = esMovil;
+        cargarDatosFormulario();
     }
 
     @Override
@@ -211,6 +235,32 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
     }	
 
     private void cargarDatosFormulario() {
+    	H2 titulo = new H2("Modificar Empresa");
+        titulo.getStyle().set("text-align", "center");
+
+        Button botonCampos = new Button("+ Campos personalizados");
+        botonCampos.setId("boton-campos");
+        botonCampos.getStyle().set("font-size", "12px").set("margin-left", "10px").set("margin-top", "7px").set("background-color", "green").set("color", "white").set("cursor", "pointer").set("border", "none");
+        
+        UI.getCurrent().getPage().executeJs("""
+        	    const btn = document.getElementById('boton-campos');
+        	    function updateButtonText() {
+        	        if (window.innerWidth < 767) {
+        	            btn.textContent = '+ Campos';
+        	        } else {
+        	            btn.textContent = '+ Campos personalizados';
+        	        }
+        	    }
+        	    updateButtonText();
+        	    window.addEventListener('resize', updateButtonText);
+        	""");
+        
+        HorizontalLayout titulo1 = new HorizontalLayout(titulo, botonCampos);
+        titulo1.setJustifyContentMode(JustifyContentMode.CENTER);
+        titulo1.setAlignItems(Alignment.CENTER);
+
+        botonCampos.addClickListener(e -> mostrarDialogCamposPersonalizados());
+         
         TextField campo1 = new TextField("Nombre Comercial");
         campo1.setValue(empresaActual.getNombreComercial());
 
@@ -240,77 +290,95 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         
         TextField campo10 = new TextField("Máximo Empleados");
         campo10.setValue(String.valueOf(empresaActual.getMaxEmpleados()));
-
-        TextField campo11 = new TextField("Código GTSERP");
-        campo11.setValue(String.valueOf(empresaActual.getCodGtserp()));
-
-        TextField campo12 = new TextField("Grupo GTSERP");
-        campo12.setValue(String.valueOf(empresaActual.getGrupoGtserp()));
-
-        TextField campo13 = new TextField("Empresa GTSERP");
-        campo13.setValue(String.valueOf(empresaActual.getEmpresaGtserp()));
-
-        Select<String> campo14 = new Select<>();
-        campo14.setLabel("Multiusuario");
-        campo14.setItems("Activar", "Desactivar");
-        campo14.setValue(empresaActual.getMultiusuario() == 1 ? "Activar" : "Desactivar");
+        campo10.setReadOnly(true);
         
-        Select<String> campo15 = new Select<>();
-        campo15.setLabel("Inspector");
-        campo15.setItems("Activar", "Desactivar");
-        campo15.setValue(empresaActual.getInspector() == 1 ? "Activar" : "Desactivar");
+        Select<String> campo11 = new Select<>();
+        campo11.setLabel("Multiusuario");
+        campo11.setItems("Activar", "Desactivar");
+        campo11.setValue(empresaActual.getMultiusuario() == 1 ? "Activar" : "Desactivar");
+        
+        Select<String> campo12 = new Select<>();
+        campo12.setLabel("Inspector");
+        campo12.setItems("Activar", "Desactivar");
+        campo12.setValue(empresaActual.getInspector() == 1 ? "Activar" : "Desactivar");
 
-        Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo14, campo15)
-            .forEach(tf -> tf.setWidth("300px"));
+        Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11, campo12).forEach(tf -> tf.setWidth("300px"));
+        
+        List<CustomFields> camposGuardados = customFieldsRepositorio.findByEmpresa_Id(empresaActual.getId());
+        Map<String, TextField> camposPersonalizadosMap = new HashMap<>();
 
-        if (usuarioLogueado.getRol() == 1) {
-            Stream.of(campo10, campo11, campo12, campo13).forEach(tf -> tf.setWidth("300px"));
+        VerticalLayout columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
+        VerticalLayout columnaDerecha = new VerticalLayout(campo7, campo8, campo9, campo10, campo11, campo12);
+
+        List<CustomFields> camposUsuario = customFieldsRepositorio.findByEmpresa_IdAndUsuario_Id(empresaActual.getId(), usuarioActual.getId());
+
+        Set<String> nombresCamposUsuario = camposUsuario.stream().map(CustomFields::getName).collect(Collectors.toSet());
+        
+        int index = 0;
+        for (CustomFields campo : camposGuardados) {
+            TextField campoPersonalizado = new TextField(campo.getLabel());
+            campoPersonalizado.setWidth("300px");
+            campoPersonalizado.setValue(campo.getValor() != null ? campo.getValor() : "");
+
+            if (usuarioActual.getRol() == 1) {
+                campoPersonalizado.setReadOnly(false);
+            } else {
+                boolean esEditable = nombresCamposUsuario.contains(campo.getName());
+                campoPersonalizado.setReadOnly(!esEditable);
+            }
+
+            camposPersonalizadosMap.put(campo.getName(), campoPersonalizado);
+
+            if (esMovil) {
+                columnaDerecha.add(campoPersonalizado);
+            } else {
+                if (index % 2 == 0) {
+                    columnaIzquierda.add(campoPersonalizado);
+                } else {
+                    columnaDerecha.add(campoPersonalizado);
+                }
+                index++;
+            }
         }
+
+        HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
+        columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+        columnasLayout.setAlignItems(Alignment.START);
+        columnasLayout.addClassName("form-columns");
 
         Button btnActualizar = new Button("Actualizar");
         btnActualizar.setWidth("100px");
         btnActualizar.setHeight("40px");
-        btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "35px").set("margin-left", "100px");
-        
+        btnActualizar.getStyle().set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("margin-top", "30px");
+
         btnActualizar.addClickListener(e -> {
-            if (usuarioLogueado.getRol() == 1) {
-                actualizarEmpresa(empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), campo10.getValue(), campo11.getValue(), campo12.getValue(), campo13.getValue(), campo14.getValue(), campo15.getValue());
-            } else {
-            	String maxEmpleados = String.valueOf(empresaActual.getMaxEmpleados());
-            	String codGtserp = String.valueOf(empresaActual.getCodGtserp());
-            	String grupoGtserp = String.valueOf(empresaActual.getGrupoGtserp());
-            	String empresaGtserp = String.valueOf(empresaActual.getEmpresaGtserp());
-                actualizarEmpresa(empresaActual.getId(), campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(), campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(), campo9.getValue(), maxEmpleados, codGtserp, grupoGtserp, empresaGtserp, campo14.getValue(), campo15.getValue());
+            String maxEmpleadosValor = (usuarioLogueado.getRol() == 1) ? campo10.getValue() : String.valueOf(empresaActual.getMaxEmpleados());
+
+            actualizarEmpresa(
+                empresaActual.getId(),
+                campo1.getValue(), campo2.getValue(), campo3.getValue(), campo4.getValue(),
+                campo5.getValue(), campo6.getValue(), campo7.getValue(), campo8.getValue(),
+                campo9.getValue(), maxEmpleadosValor, campo11.getValue(), campo12.getValue()
+            );
+
+            for (Map.Entry<String, TextField> entry : camposPersonalizadosMap.entrySet()) {
+                String nombreCampo = entry.getKey();
+                String valorCampo = entry.getValue().getValue();
+
+                Optional<CustomFields> customOpt = customFieldsRepositorio.findByEmpresaAndName(empresaActual, nombreCampo);
+                if (customOpt.isPresent()) {
+                    CustomFields campoExistente = customOpt.get();
+                    campoExistente.setValor(valorCampo);
+                    customFieldsRepositorio.save(campoExistente);
+                }
             }
+            Notification.show("Datos actualizados correctamente", 2000, Notification.Position.TOP_CENTER);
         });
-
-        VerticalLayout columnaDerecha;
-        VerticalLayout columnaIzquierda;
-        VerticalLayout layoutFormulario = new VerticalLayout();
-
-        if (usuarioLogueado.getRol() == 1) {
-            columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8);
-            columnaDerecha = new VerticalLayout(campo9, campo10, campo11, campo12, campo13, campo14, campo15, btnActualizar);
-            HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
-            columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-            columnasLayout.setAlignItems(Alignment.START);
-
-            layoutFormulario.add(new H2("Modificar Empresa"), columnasLayout);
-        } else {
-            columnaIzquierda = new VerticalLayout(campo1, campo2, campo3, campo4, campo5, campo6);
-            columnaDerecha = new VerticalLayout(campo7, campo8, campo9, campo14, campo15);
-
-            HorizontalLayout columnasLayout = new HorizontalLayout(columnaIzquierda, columnaDerecha);
-            columnasLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-            columnasLayout.setAlignItems(Alignment.START);
-
-            columnaDerecha.add(btnActualizar);  
-            layoutFormulario.add(new H2("Modificar Empresa"), columnasLayout);
-        }
 
         columnaIzquierda.setWidth("45%");
         columnaDerecha.setWidth("45%");
 
+        VerticalLayout layoutFormulario = new VerticalLayout(titulo1, columnasLayout, btnActualizar);
         layoutFormulario.setAlignItems(Alignment.CENTER);
         layoutFormulario.setWidthFull();
         layoutFormulario.getStyle().set("padding", "20px");
@@ -318,21 +386,11 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         setContent(layoutFormulario);
     }
 
-    private void actualizarEmpresa(int id, String nombreComercial, String razonSocial, String direccion, String codigoPostal, String pais, String provincia, String poblacion, String telefono, String correoElectronico, String maxEmpleados, String codigoGTSERP, String grupoGTSERP, String empresaGTSERP, String multiusuario, String inspector) {
-        int codigo_gtserp = Integer.parseInt(codigoGTSERP);
-        int grupo_gtserp = Integer.parseInt(grupoGTSERP);
-        int empresa_gtserp = Integer.parseInt(empresaGTSERP);
+    
+    private void actualizarEmpresa(int id, String nombreComercial, String razonSocial, String direccion, String codigoPostal, String pais, String provincia, String poblacion, String telefono, String correoElectronico, String maxEmpleados, String multiusuario, String inspector) {
         int max_emleados = Integer.parseInt(maxEmpleados);
 
         Empresa empresa = empresaRepositorio.findById(id).orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
-
-        if (empresa.getCodGtserp() != codigo_gtserp || empresa.getGrupoGtserp() != grupo_gtserp || empresa.getEmpresaGtserp() != empresa_gtserp) {
-            boolean existeCombinacion = empresaRepositorio.existsByCodGtserpAndGrupoGtserpAndEmpresaGtserp(codigo_gtserp, grupo_gtserp, empresa_gtserp);
-            if (existeCombinacion) {
-                Notification.show("Error duplicado", 3000, Notification.Position.TOP_CENTER);
-                return;
-            }
-        }
 
         empresa.setNombreComercial(nombreComercial);
         empresa.setRazonSocial(razonSocial);
@@ -344,9 +402,6 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         empresa.setTelefono(telefono);
         empresa.setEmail(correoElectronico);
         empresa.setMaxEmpleados(max_emleados);
-        empresa.setCodGtserp(codigo_gtserp);
-        empresa.setGrupoGtserp(grupo_gtserp);
-        empresa.setEmpresaGtserp(empresa_gtserp);
         empresa.setMultiusuario("Activar".equals(multiusuario) ? 1 : 0);
         empresa.setInspector("Activar".equals(inspector) ? 1 : 0);
 
@@ -565,4 +620,155 @@ public class ModEmpresa extends AppLayout implements BeforeEnterObserver {
         dialog.add(layout);
         dialog.open();
     }
+	
+	private void mostrarDialogCamposPersonalizados() {
+	    Dialog dialog = new Dialog();
+	    dialog.setWidth("550px");
+
+	    VerticalLayout layoutCampos = new VerticalLayout();
+	    layoutCampos.setSpacing(false);
+	    layoutCampos.setPadding(false);
+
+	    H4 tituloDialog = new H4("Campos Personalizados");
+	    tituloDialog.getStyle().set("text-align", "center").set("width", "100%").set("margin-bottom", "10px");
+
+	    List<CustomFields> camposGuardados;
+	    if(usuarioActual.getId() == 1) {
+	    	 camposGuardados = customFieldsRepositorio.findByEmpresa_Id(empresaActual.getId());
+	    } else {
+	    	 camposGuardados = customFieldsRepositorio.findByEmpresa_IdAndUsuario_Id(empresaActual.getId(), usuarioActual.getId());
+	    }
+	   
+	    for (CustomFields campo : camposGuardados) {
+	        HorizontalLayout filaCargada = crearFilaCargada(layoutCampos, campo);
+	        layoutCampos.add(filaCargada);
+	    }
+
+	    HorizontalLayout filaNueva = crearFila(layoutCampos);
+	    layoutCampos.add(filaNueva);
+	    layoutCampos.setWidthFull(); 
+	    layoutCampos.setAlignItems(Alignment.CENTER); 
+
+	    Button botonGuardar = new Button("Guardar");
+	    botonGuardar.getStyle().set("font-size", "14px").set("margin-top", "10px").set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("border", "none");
+	    botonGuardar.setWidth("100px");
+	    botonGuardar.addClickListener(click -> {
+	        List<CustomFields> existentes = customFieldsRepositorio.findByEmpresa_Id(empresaActual.getId());
+	        Set<String> nombresExistentes = existentes.stream().map(CustomFields::getName).collect(Collectors.toSet());
+
+	        for (Component c : layoutCampos.getChildren().toList()) {
+	            if (c instanceof HorizontalLayout fila) {
+	                if (fila.getComponentCount() < 2) continue;
+
+	                Component comp1 = fila.getComponentAt(0);
+	                Component comp2 = fila.getComponentAt(1);
+
+	                if (comp1 instanceof TextField labelField && comp2 instanceof TextField nameField) {
+	                    String label = labelField.getValue().trim();
+	                    String name = nameField.getValue().trim();
+
+	                    if (!label.isEmpty() && !name.isEmpty()) {
+	                        if (!nombresExistentes.contains(name)) {
+	                            CustomFields custom = new CustomFields();
+	                            custom.setEmpresaId(empresaActual);
+	                            custom.setUsuarioId(usuarioActual);
+	                            custom.setLabel(label);
+	                            custom.setName(name);
+	                            customFieldsRepositorio.save(custom);
+
+	                            nombresExistentes.add(name);
+	                        }
+	                    }
+	                }
+	            }
+	        }
+	        dialog.close();
+	        cargarDatosFormulario();
+	    });
+
+	    HorizontalLayout botones = new HorizontalLayout(botonGuardar);
+	    botones.setJustifyContentMode(JustifyContentMode.CENTER);
+	    botones.setSpacing(true);
+
+	    VerticalLayout contenidoDialog = new VerticalLayout(tituloDialog, layoutCampos, botones);
+	    contenidoDialog.setJustifyContentMode(JustifyContentMode.CENTER);
+	    contenidoDialog.setAlignItems(Alignment.CENTER);
+
+	    dialog.add(contenidoDialog);
+	    dialog.open();
+	}
+
+	private HorizontalLayout crearFila(VerticalLayout parentLayout) {
+	    TextField campo1 = new TextField();
+	    campo1.setPlaceholder("Label");
+
+	    TextField campo2 = new TextField();
+	    campo2.setPlaceholder("Name");
+
+	    Image añadirImagen = new Image("img/add.png", "Añadir Icono");
+	    añadirImagen.setWidth("25px");
+	    añadirImagen.setHeight("25px");
+	    añadirImagen.getStyle().set("margin-top", "5px");
+
+	    Image eliminarImagen = new Image("img/menos.png", "Eliminar Icono");
+	    eliminarImagen.setWidth("25px");
+	    eliminarImagen.setHeight("25px");
+	    eliminarImagen.getStyle().set("margin-top", "5px");
+
+	    Button boton = new Button(añadirImagen);
+	    boton.getStyle().set("font-size", "20px").set("margin-left", "5px").set("background-color", "#007BFF").set("color", "white").set("cursor", "pointer").set("padding", "0").set("text-align", "center").set("border-radius", "100%");
+
+	    HorizontalLayout fila = new HorizontalLayout(campo1, campo2, boton);
+	    fila.setAlignItems(Alignment.CENTER);
+
+	    boton.addClickListener(event -> {
+	        if (boton.getIcon() == añadirImagen) {
+	            String label = campo1.getValue().trim();
+	            String name = campo2.getValue().trim();
+
+	            if (!label.isEmpty() && !name.isEmpty()) {
+	                boton.setIcon(eliminarImagen);
+	                boton.getStyle().set("background-color", "red");
+
+	                HorizontalLayout nuevaFila = crearFila(parentLayout);
+	                parentLayout.add(nuevaFila);
+	            } else {
+	                Notification.show("Por favor, complete ambos campos.", 2000, Notification.Position.TOP_CENTER);
+	            }
+	        } else {
+	            parentLayout.remove(fila);
+	        }
+	    });
+	    return fila;
+	}
+
+	private HorizontalLayout crearFilaCargada(VerticalLayout parentLayout, CustomFields campo) {
+	    TextField campo1 = new TextField();
+	    campo1.setValue(campo.getLabel());
+
+	    TextField campo2 = new TextField();
+	    campo2.setValue(campo.getName());
+
+	    Image eliminarImagen = new Image("img/menos.png", "Eliminar Icono");
+	    eliminarImagen.setWidth("25px");
+	    eliminarImagen.setHeight("25px");
+	    eliminarImagen.getStyle().set("margin-top", "5px");
+
+	    Button boton = new Button(eliminarImagen);
+	    boton.getStyle().set("font-size", "20px").set("margin-left", "5px").set("background-color", "red").set("color", "white").set("cursor", "pointer").set("padding", "0").set("text-align", "center").set("border-radius", "100%");
+
+	    HorizontalLayout fila = new HorizontalLayout(campo1, campo2, boton);
+	    fila.setAlignItems(Alignment.CENTER);
+
+	    boton.addClickListener(event -> {
+	        eliminarCampos(campo);
+	        parentLayout.remove(fila);
+	    });
+
+	    return fila;
+	}
+
+	private void eliminarCampos(CustomFields campo) {
+	    customFieldsRepositorio.delete(campo);
+	}
 }
