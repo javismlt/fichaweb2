@@ -25,12 +25,12 @@ import java.util.Optional;
 import java.time.LocalDateTime;
 
 @Route("cambiarpasswd")
-public class CambiarContraseña extends AppLayout implements BeforeEnterObserver {
+public class CambiarContrasena extends AppLayout implements BeforeEnterObserver {
     private final PasswordTokenRepositorio passwordTokenRepo;
     private final UsuarioRepositorio usuarioRepositorio;
     private Usuario usuarioActual;
 
-    public CambiarContraseña(PasswordTokenRepositorio passwordTokenRepo, UsuarioRepositorio usuarioRepositorio) {
+    public CambiarContrasena(PasswordTokenRepositorio passwordTokenRepo, UsuarioRepositorio usuarioRepositorio) {
         this.passwordTokenRepo = passwordTokenRepo;
         this.usuarioRepositorio = usuarioRepositorio;
     }
