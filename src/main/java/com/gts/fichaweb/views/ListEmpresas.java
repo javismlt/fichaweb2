@@ -216,7 +216,8 @@ public class ListEmpresas extends AppLayout {
             infoUsuario.getStyle()
                 .set("font-size", "16px")
                 .set("flex-grow", "1")
-                .set("text-align", "center");
+                .set("text-align", "left")
+            	.set("width", "100%");
 
             Image configImagen = new Image("img/ajustes.png", "Ajustes Icono");
             configImagen.setWidth("25px");

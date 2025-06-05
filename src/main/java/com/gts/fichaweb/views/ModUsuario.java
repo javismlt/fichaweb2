@@ -263,7 +263,8 @@ public class ModUsuario extends AppLayout implements BeforeEnterObserver {
             campo11.setValue(nombreEmpresaUsuario);
         }
 
-        Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11).forEach(tf -> tf.setWidth("300px"));
+        Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8).forEach(tf -> tf.setWidth("300px"));
+        Stream.of(campo9, campo10, campo11).forEach(sel -> sel.setWidth("300px"));
 
         Button btnActualizar = new Button("Actualizar");
         btnActualizar.setWidth("100px");

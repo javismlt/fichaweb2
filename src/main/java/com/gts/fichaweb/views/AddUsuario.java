@@ -282,7 +282,8 @@ public class AddUsuario extends AppLayout{
 	        campo11.setItems(nombresEmpresas);
 	    }
 
-	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8, campo9, campo10, campo11).forEach(tf -> tf.setWidth("300px"));
+	    Stream.of(campo1, campo2, campo3, campo4, campo5, campo6, campo7, campo8).forEach(tf -> tf.setWidth("300px"));
+	    Stream.of(campo9, campo10, campo11).forEach(tf -> tf.setWidth("300px"));
 	    
 	    Button btnGuardar = new Button("Guardar");
 	    btnGuardar.setWidth("100px");
